@@ -35,7 +35,7 @@ export function TopNav() {
       className="sticky top-0 z-40 max-md:glass-bar md:border-b md:border-border md:bg-surface/95 md:backdrop-blur-md"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
-      <div className="relative mx-auto flex h-[76px] max-w-[1440px] items-center gap-4 px-4 md:px-6 lg:px-8">
+      <div className="relative mx-auto flex h-(--top-nav-h) max-w-[1440px] items-center gap-4 px-4 md:px-6 lg:px-8">
         <button
           type="button"
           aria-label="Open menu"

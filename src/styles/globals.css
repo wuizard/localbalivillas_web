@@ -30,6 +30,10 @@
   --color-danger: #d94f4f;
   --color-whatsapp: #25d366;
 
+  /* Height of the sticky top bar. Read by TopNav and by the `scroll-padding-top` below;
+     the two must not drift, or every scroll lands behind the header. */
+  --top-nav-h: 76px;
+
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-script: var(--font-parisienne), "Snell Roundhand", cursive;
@@ -132,6 +136,20 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+
+    /**
+     * The top bar is `position: sticky`, so it covers the first 77px of the viewport. Without
+     * this, anything scrolled to the top of the viewport sits *behind* it.
+     *
+     * The App Router reads this value directly: on navigation it treats a segment as "already
+     * in view" only when its top edge is at or below `scroll-padding-top`, and otherwise
+     * resets the document (see `getScrollTargetState` in next/dist/client/components/
+     * layout-router.js). Left at `auto` it resolves to 0, so a leftover scroll offset smaller
+     * than the bar counted as in-view and the router skipped the reset — which is why some
+     * navigations opened with the page already nudged under the header. It also keeps `#main`
+     * and any in-page anchor from landing underneath the bar.
+     */
+    scroll-padding-top: calc(var(--top-nav-h) + env(safe-area-inset-top, 0px) + 1px);
   }
 
   body {
