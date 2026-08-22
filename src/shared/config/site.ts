@@ -16,11 +16,16 @@ export const site = {
 
 export const whatsappHref = `https://api.whatsapp.com/send?phone=${site.whatsapp}`;
 
+/**
+ * About-us hrefs use the legacy slugs verbatim (`who-are-we`, `terms-condition`, `24-7-support`).
+ * They read a little oddly, and that is the point: these URLs are live on localbalivillas.com
+ * today and §8 preserves them exactly rather than resetting their search authority.
+ */
 export const primaryNav = [
   { label: "Villas", href: "/properties" },
   { label: "Activities", href: "/activities" },
   { label: "Events", href: "/events" },
-  { label: "About Us", href: "/about-us/who-we-are" },
+  { label: "About Us", href: "/about-us/who-are-we" },
   { label: "Contact", href: "/about-us/contact-us" },
 ] as const;
 
@@ -37,14 +42,14 @@ export const footerNav = {
     { label: "Villas", href: "/properties" },
     { label: "Activities", href: "/activities" },
     { label: "Events", href: "/events" },
-    { label: "About Us", href: "/about-us/who-we-are" },
+    { label: "About Us", href: "/about-us/who-are-we" },
     { label: "Contact", href: "/about-us/contact-us" },
   ],
   help: [
     { label: "FAQ", href: "/about-us/faq" },
-    { label: "Terms & Conditions", href: "/about-us/terms-and-conditions" },
+    { label: "Terms & Conditions", href: "/about-us/terms-condition" },
     { label: "Privacy Policy", href: "/about-us/privacy-policy" },
-    { label: "Cancellation Policy", href: "/about-us/cancellation-policy" },
+    { label: "24/7 Support", href: "/about-us/24-7-support" },
   ],
 } as const;
 
@@ -65,7 +70,10 @@ export const profileMenu = [
   {
     title: "About us",
     links: [
-      { label: "Who we are", href: "/about-us/who-we-are" },
+      { label: "Who are we", href: "/about-us/who-are-we" },
+      { label: "Why book with us", href: "/about-us/why-book-with-us" },
+      { label: "Best price guarantee", href: "/about-us/best-price-guarantee" },
+      { label: "24/7 support", href: "/about-us/24-7-support" },
       { label: "Contact us", href: "/about-us/contact-us" },
       { label: "FAQ", href: "/about-us/faq" },
     ],
@@ -73,9 +81,12 @@ export const profileMenu = [
   {
     title: "Policies",
     links: [
-      { label: "Terms & Conditions", href: "/about-us/terms-and-conditions" },
+      { label: "Terms & Conditions", href: "/about-us/terms-condition" },
+      { label: "Booking terms", href: "/about-us/terms-condition-order" },
       { label: "Privacy Policy", href: "/about-us/privacy-policy" },
-      { label: "Cancellation Policy", href: "/about-us/cancellation-policy" },
+      { label: "Client protection", href: "/about-us/client-protection" },
+      { label: "Compliance & standards", href: "/about-us/compliance-standard" },
+      { label: "Legal information", href: "/about-us/legal-information" },
     ],
   },
 ] as const;

@@ -15,9 +15,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
+import { quoteStay } from "@/features/pricing";
 import { cn } from "@/shared/lib/cn";
-import { formatIDR } from "@/shared/lib/format";
+import { formatIDR, pluralise } from "@/shared/lib/format";
 import { ROOM_FACILITIES, type RoomFacilityKey, type RoomOffer } from "../types";
 
 const FACILITY_ICONS: Record<RoomFacilityKey, typeof Coffee> = {
@@ -44,8 +46,23 @@ type RoomOfferCardProps = {
 
 export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCardProps) {
   const [quantity, setQuantity] = useState(1);
+  const params = useSearchParams();
 
-  const bookHref = `/booking/${propertyKey}?room=${encodeURIComponent(room.id)}&rooms=${quantity}`;
+  const checkIn = params.get("checkIn");
+  const checkOut = params.get("checkOut");
+
+  // Every price on this card comes from features/pricing — nothing here does its own maths.
+  const quote =
+    checkIn && checkOut
+      ? quoteStay({ room: room.pricing, checkIn, checkOut, rooms: quantity })
+      : null;
+
+  const bookQuery = new URLSearchParams({ room: room.id, rooms: String(quantity) });
+  if (checkIn) bookQuery.set("checkIn", checkIn);
+  if (checkOut) bookQuery.set("checkOut", checkOut);
+  const bookHref = `/booking/${propertyKey}?${bookQuery.toString()}`;
+
+  const soldOut = quote !== null && !quote.available;
 
   return (
     <article className="overflow-hidden rounded-md border border-border bg-surface shadow-sm">
@@ -84,11 +101,21 @@ export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCard
 
         <div className="flex flex-col gap-3 border-t border-border p-4 lg:border-t-0 lg:p-5">
           <div>
-            <p className="text-[11px] text-fg-muted uppercase">From</p>
-            <p className="tabular mt-0.5 text-price text-fg lg:text-2xl">
-              {room.basePrice === null ? "On request" : formatIDR(room.basePrice)}
+            <p className="text-[11px] text-fg-muted uppercase">
+              {quote && quote.nights > 0 ? "Total" : "From"}
             </p>
-            <p className="text-body-sm text-fg-muted">/ night</p>
+            <p className="tabular mt-0.5 text-price text-fg lg:text-2xl">
+              {quote && quote.nights > 0
+                ? formatIDR(quote.total)
+                : room.basePrice === null
+                  ? "On request"
+                  : formatIDR(room.basePrice)}
+            </p>
+            <p className="text-body-sm text-fg-muted">
+              {quote && quote.nights > 0
+                ? `${pluralise(quote.nights, "night")} × ${pluralise(quote.rooms, "room")}`
+                : "/ night"}
+            </p>
           </div>
 
           <label className="flex items-center justify-between gap-3 rounded-sm border border-border px-2 py-1.5">
@@ -110,18 +137,24 @@ export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCard
             </Stepper>
           </label>
 
-          <Link
-            href={bookHref}
-            className={cn(
-              "flex h-11 items-center justify-center rounded-sm bg-brand-500 text-label",
-              "font-semibold tracking-[0.08em] text-white uppercase shadow-sm",
-              "transition-[background-color,transform] duration-[120ms] ease-out",
-              "hover:bg-brand-600 active:scale-[0.98]",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
-            )}
-          >
-            Book now
-          </Link>
+          {soldOut ? (
+            <p className="flex h-11 items-center justify-center rounded-sm bg-surface-muted px-3 text-center text-body-sm font-medium text-fg-muted">
+              Not available for these dates
+            </p>
+          ) : (
+            <Link
+              href={bookHref}
+              className={cn(
+                "flex h-11 items-center justify-center rounded-sm bg-brand-500 text-label",
+                "font-semibold tracking-[0.08em] text-white uppercase shadow-sm",
+                "transition-[background-color,transform] duration-[120ms] ease-out",
+                "hover:bg-brand-600 active:scale-[0.98]",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
+              )}
+            >
+              Book now
+            </Link>
+          )}
 
           <ul className="flex flex-col gap-1.5 text-body-sm text-fg-muted">
             <li className="flex items-center gap-2">
@@ -142,8 +175,11 @@ export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCard
       </div>
 
       <p className="border-t border-border bg-surface-muted/60 px-4 py-2 text-[11px] text-fg-muted lg:px-5">
-        {propertyType === "villas" ? "Whole villa" : "Room"} rate shown before dates are chosen.
-        Pick your dates above for the exact total.
+        {quote && quote.nights > 0
+          ? `${quote.breakdown.map((night) => formatIDR(night.price)).slice(0, 4).join(" + ")}${
+              quote.breakdown.length > 4 ? " + …" : ""
+            } · non-refundable`
+          : `${propertyType === "villas" ? "Whole villa" : "Room"} rate shown before dates are chosen. Pick your dates above for the exact total.`}
       </p>
     </article>
   );

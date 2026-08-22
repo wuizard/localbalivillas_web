@@ -17,7 +17,7 @@ import {
   type PropertyDetail,
   type PropertyType,
 } from "@/features/property";
-import { PropertyReviews, getReviewsWithFallback } from "@/features/review";
+import { PropertyReviews, getReviewsWithFallback, type GuestReview } from "@/features/review";
 import { AvailabilityBar } from "@/features/search";
 import { env } from "@/shared/config/env";
 import { site } from "@/shared/config/site";
@@ -94,7 +94,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         // Structured data only, built from values we already render on the page.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJsonLd(property)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJsonLd(property, reviews)) }}
       />
 
       <PropertyHeader property={property} />
@@ -115,7 +115,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
         property={property}
         availabilitySlot={
           <Suspense fallback={<Skeleton className="h-[268px] rounded-md md:h-[76px]" />}>
-            <AvailabilityBar />
+            <AvailabilityBar roomPricing={property.rooms.map((room) => room.pricing)} />
           </Suspense>
         }
       />
@@ -129,7 +129,25 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   );
 }
 
-function buildJsonLd(property: PropertyDetail) {
+function buildJsonLd(property: PropertyDetail, reviews: GuestReview[]) {
+  /**
+   * Only emitted when reviews exist. Demo reviews are gated out of production, so this can
+   * never publish a rating nobody gave — a fabricated `AggregateRating` is a manual action
+   * from Google and a consumer-protection problem besides.
+   */
+  const aggregateRating =
+    reviews.length > 0
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: (
+            reviews.reduce((total, review) => total + review.rating, 0) / reviews.length
+          ).toFixed(1),
+          reviewCount: reviews.length,
+          bestRating: 5,
+          worstRating: 1,
+        }
+      : null;
+
   const offers = property.rooms
     .filter((room) => room.basePrice !== null)
     .map((room) => ({
@@ -157,6 +175,7 @@ function buildJsonLd(property: PropertyDetail) {
           addressCountry: "ID",
         },
         ...(offers.length > 0 ? { makesOffer: offers } : {}),
+        ...(aggregateRating ? { aggregateRating } : {}),
       },
       {
         "@type": "BreadcrumbList",

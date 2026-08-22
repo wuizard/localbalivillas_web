@@ -1,6 +1,23 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { Skeleton } from "@/shared/ui";
 import type { PropertyDetail } from "../types";
 import { RoomOfferCard } from "./RoomOfferCard";
+
+/**
+ * Room cards quote from the dates in the URL, which a prerendered page cannot know at build
+ * time, so they hydrate behind a Suspense boundary and show this until they do.
+ */
+function RoomListSkeleton({ count }: { count: number }) {
+  return (
+    <ul className="flex flex-col gap-4 md:gap-5">
+      {Array.from({ length: Math.max(count, 1) }, (_, index) => (
+        <li key={index}>
+          <Skeleton className="h-[420px] rounded-md lg:h-[280px]" />
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 type RoomOfferListProps = {
   property: PropertyDetail;
@@ -40,17 +57,19 @@ export function RoomOfferList({ property, availabilitySlot }: RoomOfferListProps
             we&apos;ll send availability and rates the same day.
           </p>
         ) : (
-          <ul className="flex flex-col gap-4 md:gap-5">
-            {property.rooms.map((room) => (
-              <li key={room.id}>
-                <RoomOfferCard
-                  room={room}
-                  propertyKey={property.key}
-                  propertyType={property.type}
-                />
-              </li>
-            ))}
-          </ul>
+          <Suspense fallback={<RoomListSkeleton count={property.rooms.length} />}>
+            <ul className="flex flex-col gap-4 md:gap-5">
+              {property.rooms.map((room) => (
+                <li key={room.id}>
+                  <RoomOfferCard
+                    room={room}
+                    propertyKey={property.key}
+                    propertyType={property.type}
+                  />
+                </li>
+              ))}
+            </ul>
+          </Suspense>
         )}
       </div>
     </section>

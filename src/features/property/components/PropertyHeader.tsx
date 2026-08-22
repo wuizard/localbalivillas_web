@@ -2,6 +2,7 @@ import { BedDouble, MapPin, Star, Users } from "lucide-react";
 import Link from "next/link";
 import { formatIDR } from "@/shared/lib/format";
 import { PROPERTY_TYPE_LABEL, bedroomLabel, type PropertyDetail } from "../types";
+import { ShareButton } from "@/shared/ui/ShareButton";
 import { FavouriteButton } from "./FavouriteButton";
 
 export function PropertyHeader({ property }: { property: PropertyDetail }) {
@@ -58,7 +59,7 @@ export function PropertyHeader({ property }: { property: PropertyDetail }) {
           </ul>
         </div>
 
-        <div className="flex items-center gap-3 max-md:w-full max-md:justify-between">
+        <div className="flex items-center gap-1 max-md:w-full max-md:justify-between md:gap-3">
           {property.fromPrice === null ? null : (
             <span className="flex flex-col md:items-end">
               <span className="text-[11px] text-fg-muted uppercase">From</span>
@@ -66,6 +67,8 @@ export function PropertyHeader({ property }: { property: PropertyDetail }) {
               <span className="text-body-sm text-fg-muted">/ night</span>
             </span>
           )}
+
+          <ShareButton url={property.href} title={property.name} />
 
           {/* Inline here rather than floating over a photo, so it needs the card placement off. */}
           <FavouriteButton

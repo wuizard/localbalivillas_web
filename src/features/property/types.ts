@@ -1,3 +1,5 @@
+import type { PricedRoom } from "@/features/pricing";
+
 export const PROPERTY_TYPES = ["villas", "resorts", "hotels", "bamboo_house"] as const;
 
 export type PropertyType = (typeof PROPERTY_TYPES)[number];
@@ -38,8 +40,10 @@ export type RoomOffer = {
   id: string;
   name: string;
   images: string[];
-  /** Base nightly rate in IDR. Date and day overrides are resolved by features/pricing (M2). */
+  /** Base nightly rate in IDR, before any date or weekday override. */
   basePrice: number | null;
+  /** Everything `features/pricing` needs to quote a stay. */
+  pricing: PricedRoom;
   bedrooms: number | null;
   maxGuests: number | null;
   roomSize: string | null;

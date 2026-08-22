@@ -1,14 +1,14 @@
 "use client";
 
-import { DatePicker } from "@heroui/react";
-import { getLocalTimeZone, today, type CalendarDate } from "@internationalized/date";
+import { getLocalTimeZone, type CalendarDate } from "@internationalized/date";
 import { format } from "date-fns";
 import { BedDouble, CalendarDays, Search, User } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
+import type { PricedRoom } from "@/features/pricing";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 import { cn } from "@/shared/lib/cn";
-import { StayCalendar } from "./CalendarLayout";
+import { StayPriceCalendar } from "./StayPriceCalendar";
 import { GuestStepper, MAX_ADULTS, MAX_CHILDREN, guestTotal } from "./GuestPicker";
 import { SearchSegment, SegmentValue } from "./SearchSegment";
 
@@ -23,25 +23,21 @@ function formatDay(date: CalendarDate | null): string | null {
  * state so a chosen stay survives a refresh and can be shared — the same rule the results
  * page follows (CLAUDE.md §4).
  */
-export function AvailabilityBar() {
+export function AvailabilityBar({ roomPricing = [] }: { roomPricing?: PricedRoom[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
-  const now = today(getLocalTimeZone());
   const [checkIn, setCheckIn] = useState<CalendarDate | null>(null);
   const [checkOut, setCheckOut] = useState<CalendarDate | null>(null);
   const [adults, setAdults] = useState(Number(params.get("adults")) || 2);
   const [children, setChildren] = useState(Number(params.get("children")) || 0);
   const [rooms, setRooms] = useState(Number(params.get("rooms")) || 1);
 
+  const stay = useDismissable<HTMLDivElement>();
+  const stayEnd = useDismissable<HTMLDivElement>();
   const guests = useDismissable<HTMLDivElement>();
   const roomPicker = useDismissable<HTMLDivElement>();
-
-  function handleCheckIn(next: CalendarDate | null) {
-    setCheckIn(next);
-    if (next && checkOut && checkOut.compare(next) <= 0) setCheckOut(null);
-  }
 
   function submit() {
     const next = new URLSearchParams(params.toString());
@@ -70,15 +66,41 @@ export function AvailabilityBar() {
         "grid gap-1 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] md:items-stretch md:gap-0",
       )}
     >
-      <DateField label="Check-in" value={checkIn} onChange={handleCheckIn} minValue={now} />
+      <Popover
+        control={stay}
+        icon={CalendarDays}
+        label="Check-in"
+        value={formatDay(checkIn) ?? "Add date"}
+        panelClassName="left-0 right-auto"
+      >
+        <StayPriceCalendar
+          rooms={roomPricing}
+          value={checkIn && checkOut ? { start: checkIn, end: checkOut } : null}
+          onChange={(range) => {
+            setCheckIn(range?.start ?? null);
+            setCheckOut(range?.end ?? null);
+            if (range?.end) stay.setOpen(false);
+          }}
+        />
+      </Popover>
 
-      <DateField
+      <Popover
+        control={stayEnd}
+        icon={CalendarDays}
         label="Check-out"
-        value={checkOut}
-        onChange={setCheckOut}
-        minValue={checkIn?.add({ days: 1 }) ?? now.add({ days: 1 })}
+        value={formatDay(checkOut) ?? "Add date"}
         className="max-md:border-t md:border-l border-border"
-      />
+      >
+        <StayPriceCalendar
+          rooms={roomPricing}
+          value={checkIn && checkOut ? { start: checkIn, end: checkOut } : null}
+          onChange={(range) => {
+            setCheckIn(range?.start ?? null);
+            setCheckOut(range?.end ?? null);
+            if (range?.end) stayEnd.setOpen(false);
+          }}
+        />
+      </Popover>
 
       <Popover
         control={guests}
@@ -141,51 +163,13 @@ export function AvailabilityBar() {
   );
 }
 
-function DateField({
-  label,
-  value,
-  onChange,
-  minValue,
-  className,
-}: {
-  label: string;
-  value: CalendarDate | null;
-  onChange: (next: CalendarDate | null) => void;
-  minValue: CalendarDate;
-  className?: string;
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  return (
-    <DatePicker
-      aria-label={label}
-      value={value}
-      onChange={onChange}
-      minValue={minValue}
-      className={className}
-    >
-      <DatePicker.Trigger
-        ref={triggerRef}
-        aria-label={label}
-        className="h-full w-full rounded-sm text-left hover:bg-surface-muted/70"
-      >
-        <SearchSegment icon={CalendarDays} label={label}>
-          <SegmentValue value={formatDay(value)} placeholder="Add date" />
-        </SearchSegment>
-      </DatePicker.Trigger>
-      <DatePicker.Popover triggerRef={triggerRef} placement="bottom start" offset={12}>
-        <StayCalendar aria-label={label} minValue={minValue} />
-      </DatePicker.Popover>
-    </DatePicker>
-  );
-}
-
 function Popover({
   control,
   icon,
   label,
   value,
   className,
+  panelClassName,
   children,
 }: {
   control: ReturnType<typeof useDismissable<HTMLDivElement>>;
@@ -193,6 +177,7 @@ function Popover({
   label: string;
   value: string;
   className?: string;
+  panelClassName?: string;
   children: React.ReactNode;
 }) {
   const { isOpen, setOpen, containerRef, triggerRef } = control;
@@ -218,7 +203,10 @@ function Popover({
           ref={containerRef}
           role="dialog"
           aria-label={label}
-          className="absolute top-[calc(100%+12px)] right-0 z-30 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-border bg-surface p-5 shadow-lg"
+          className={cn(
+            "absolute top-[calc(100%+12px)] right-0 z-30 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-border bg-surface p-5 shadow-lg",
+            panelClassName,
+          )}
         >
           {children}
         </div>

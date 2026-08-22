@@ -47,6 +47,8 @@ const config = [
 
   {
     // Cross-feature imports are a design smell — lift the code into shared/.
+    // `features/pricing` is the one exception CLAUDE.md §3 carves out: it is pure, has no
+    // I/O, and is the single code path every surface must use to touch money.
     files: ["src/features/**"],
     rules: {
       "no-restricted-imports": [
@@ -55,7 +57,7 @@ const config = [
           patterns: [
             ...featureBoundaries,
             {
-              group: ["@/features/*"],
+              group: ["@/features/*", "!@/features/pricing"],
               message:
                 "Features must not import other features. Move the shared code to shared/ or features/pricing.",
             },

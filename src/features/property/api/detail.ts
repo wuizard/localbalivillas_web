@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PricedRoom } from "@/features/pricing";
 import { apiGet } from "@/shared/api";
 import { htmlToParagraphs } from "@/shared/lib/html";
 import { toHouseRuleGroups } from "../lib/house-rules";
@@ -13,11 +14,19 @@ import {
 
 const DETAIL_REVALIDATE_SECONDS = 300;
 
+const priceRuleSchema = z.object({
+  date: z.array(z.string()).nullish(),
+  day: z.array(z.string()).nullish(),
+  price: z.number(),
+});
+
 const roomSchema = z.object({
   _id: z.string(),
   name: z.string().nullish(),
   propertyImage: z.array(z.string()).nullish(),
   price: z.number().nullish(),
+  priceList: z.array(priceRuleSchema).nullish(),
+  disabledDate: z.array(z.string()).nullish(),
   room: z.number().nullish(),
   roomSize: z.string().nullish(),
   poolSize: z.string().nullish(),
@@ -55,12 +64,24 @@ const detailPayloadSchema = z.union([detailSchema, z.array(detailSchema)]);
 
 function toRoomOffer(raw: z.infer<typeof roomSchema>): RoomOffer {
   const facilities = raw.facilities ?? {};
+  const basePrice = typeof raw.price === "number" && raw.price > 0 ? raw.price : null;
+
+  const pricing: PricedRoom = {
+    basePrice: basePrice ?? 0,
+    priceRules: (raw.priceList ?? []).map((rule) => ({
+      date: rule.date ?? null,
+      day: rule.day ?? null,
+      price: rule.price,
+    })),
+    disabledDates: raw.disabledDate ?? [],
+  };
 
   return {
     id: raw._id,
     name: raw.name?.trim() || "Room",
     images: (raw.propertyImage ?? []).filter((url) => url.startsWith("http")),
-    basePrice: typeof raw.price === "number" && raw.price > 0 ? raw.price : null,
+    basePrice,
+    pricing,
     bedrooms: typeof raw.room === "number" && raw.room > 0 ? raw.room : null,
     maxGuests: raw.maximumGuest?.total ?? raw.maximumGuest?.adult ?? null,
     roomSize: raw.roomSize?.trim() || null,
