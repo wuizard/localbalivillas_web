@@ -176,9 +176,7 @@ export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCard
 
       <p className="border-t border-border bg-surface-muted/60 px-4 py-2 text-[11px] text-fg-muted lg:px-5">
         {quote && quote.nights > 0
-          ? `${quote.breakdown.map((night) => formatIDR(night.price)).slice(0, 4).join(" + ")}${
-              quote.breakdown.length > 4 ? " + …" : ""
-            } · non-refundable`
+          ? "Non-refundable · this reservation cannot be changed or cancelled once paid."
           : `${propertyType === "villas" ? "Whole villa" : "Room"} rate shown before dates are chosen. Pick your dates above for the exact total.`}
       </p>
     </article>

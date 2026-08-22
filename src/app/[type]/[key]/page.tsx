@@ -71,12 +71,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${property.name} — ${label} in ${property.location}, Bali`,
     description,
     alternates: { canonical: property.href },
+    // Next merges `openGraph` shallowly, so the page object replaces the layout's outright —
+    // siteName and locale have to be restated here or the share card loses them.
     openGraph: {
       type: "website",
+      siteName: site.name,
+      locale: "en_GB",
       title: property.name,
       description,
       url: `${env.siteUrl}${property.href}`,
-      images: property.images[0] ? [{ url: property.images[0] }] : undefined,
+      images: property.images[0]
+        ? [{ url: property.images[0], alt: `${property.name}, ${property.location}, Bali` }]
+        : undefined,
     },
   };
 }
