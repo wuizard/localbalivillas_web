@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { applyCoupon } from "@/features/pricing";
+import { BASE_CURRENCY, formatMoney, useCurrency } from "@/shared/currency";
 import { cn } from "@/shared/lib/cn";
-import { formatIDR, pluralise } from "@/shared/lib/format";
+import { pluralise } from "@/shared/lib/format";
 import { checkCoupon } from "../api/queries";
 import type { AppliedCoupon, BookingDraft } from "../types";
 
@@ -17,6 +18,7 @@ type BookingSummaryProps = {
 };
 
 export function BookingSummary({ draft, coupon, onCouponChange }: BookingSummaryProps) {
+  const { rate, currency } = useCurrency();
   const { discount, total } = applyCoupon({
     subtotal: draft.subtotal,
     nights: draft.nights,
@@ -28,9 +30,9 @@ export function BookingSummary({ draft, coupon, onCouponChange }: BookingSummary
   return (
     <aside
       aria-labelledby="summary"
-      className="rounded-md border border-border bg-surface shadow-sm"
+      className="border-border bg-surface rounded-md border shadow-sm"
     >
-      <div className="flex gap-3 border-b border-border p-4">
+      <div className="border-border flex gap-3 border-b p-4">
         {draft.image ? (
           <div className="relative size-20 shrink-0 overflow-hidden rounded-sm">
             <Image src={draft.image} alt="" fill sizes="80px" className="object-cover" />
@@ -44,11 +46,11 @@ export function BookingSummary({ draft, coupon, onCouponChange }: BookingSummary
             </Link>
           </h2>
           <p className="text-body-sm text-fg-muted">{draft.location}, Bali</p>
-          <p className="mt-1 text-body-sm text-fg">{draft.roomName}</p>
+          <p className="text-body-sm text-fg mt-1">{draft.roomName}</p>
         </div>
       </div>
 
-      <dl className="flex flex-col gap-2.5 border-b border-border p-4 text-body-sm">
+      <dl className="border-border text-body-sm flex flex-col gap-2.5 border-b p-4">
         <Row icon={CalendarDays} label="Dates">
           {draft.checkIn} → {draft.checkOut}
         </Row>
@@ -61,44 +63,54 @@ export function BookingSummary({ draft, coupon, onCouponChange }: BookingSummary
         </Row>
       </dl>
 
-      <div className="border-b border-border p-4">
+      <div className="border-border border-b p-4">
         <PromoCode draft={draft} coupon={coupon} onCouponChange={onCouponChange} />
       </div>
 
       <div className="flex flex-col gap-2 p-4">
         <details className="text-body-sm">
-          <summary className="cursor-pointer text-fg-muted">
+          <summary className="text-fg-muted cursor-pointer">
             {pluralise(draft.nights, "night")} × {pluralise(draft.rooms, "room")}
           </summary>
-          <ul className="tabular mt-2 flex flex-col gap-1 text-fg-muted">
+          <ul className="tabular text-fg-muted mt-2 flex flex-col gap-1">
             {draft.breakdown.map((night) => (
               <li key={night.date} className="flex justify-between">
                 <span>{night.date}</span>
-                <span>{formatIDR(night.price)}</span>
+                <span>{formatMoney(night.price, BASE_CURRENCY)}</span>
               </li>
             ))}
           </ul>
         </details>
 
-        <div className="flex justify-between text-body">
+        <div className="text-body flex justify-between">
           <span className="text-fg-muted">Subtotal</span>
-          <span className="tabular text-fg">{formatIDR(draft.subtotal)}</span>
+          <span className="tabular text-fg">{formatMoney(draft.subtotal, BASE_CURRENCY)}</span>
         </div>
 
         {discount > 0 ? (
-          <div className="flex justify-between text-body text-success">
+          <div className="text-body text-success flex justify-between">
             <span>Discount</span>
-            <span className="tabular">−{formatIDR(discount)}</span>
+            <span className="tabular">−{formatMoney(discount, BASE_CURRENCY)}</span>
           </div>
         ) : null}
 
-        <div className="mt-1 flex items-baseline justify-between border-t border-border pt-3">
-          <span className="text-body font-semibold text-fg">Total</span>
-          <span className="tabular text-price text-fg">{formatIDR(total)}</span>
+        <div className="border-border mt-1 flex items-baseline justify-between border-t pt-3">
+          <span className="text-body text-fg font-semibold">Total</span>
+          <span className="tabular text-price text-fg">{formatMoney(total, BASE_CURRENCY)}</span>
         </div>
 
-        <p className="mt-1 flex items-start gap-2 text-body-sm text-fg-muted">
-          <Ban size={14} strokeWidth={1.7} className="mt-0.5 shrink-0 text-danger" aria-hidden />
+        {/* Everything above is the amount the payment link will actually ask for, so this
+            column is rupiah whatever the guest is browsing the site in — a checkout that
+            adds up dollars and settles in rupiah is where confusion becomes a chargeback.
+            The conversion appears once, below the line, clearly secondary. */}
+        {rate === null ? null : (
+          <p className="text-body-sm text-fg-muted text-right">
+            {formatMoney(total * rate, currency)} · indicative only, charged in {BASE_CURRENCY}
+          </p>
+        )}
+
+        <p className="text-body-sm text-fg-muted mt-1 flex items-start gap-2">
+          <Ban size={14} strokeWidth={1.7} className="text-danger mt-0.5 shrink-0" aria-hidden />
           This reservation cannot be cancelled or modified.
         </p>
       </div>
@@ -117,7 +129,7 @@ function Row({
 }) {
   return (
     <div className="flex items-start gap-2.5">
-      <Icon size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-brand-400" aria-hidden />
+      <Icon size={15} strokeWidth={1.6} className="text-brand-400 mt-0.5 shrink-0" aria-hidden />
       <dt className="sr-only">{label}</dt>
       <dd className="text-fg">{children}</dd>
     </div>
@@ -156,17 +168,17 @@ function PromoCode({ draft, coupon, onCouponChange }: BookingSummaryProps) {
 
   if (coupon) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-sm bg-success/10 px-3 py-2.5">
-        <span className="flex min-w-0 items-center gap-2 text-body-sm">
-          <Tag size={15} strokeWidth={1.7} className="shrink-0 text-success" aria-hidden />
-          <span className="truncate font-semibold text-fg">{coupon.code}</span>
-          <span className="truncate text-fg-muted">{coupon.label}</span>
+      <div className="bg-success/10 flex items-center justify-between gap-3 rounded-sm px-3 py-2.5">
+        <span className="text-body-sm flex min-w-0 items-center gap-2">
+          <Tag size={15} strokeWidth={1.7} className="text-success shrink-0" aria-hidden />
+          <span className="text-fg truncate font-semibold">{coupon.code}</span>
+          <span className="text-fg-muted truncate">{coupon.label}</span>
         </span>
         <button
           type="button"
           onClick={() => onCouponChange(null)}
           aria-label={`Remove promo code ${coupon.code}`}
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-fg-muted hover:bg-surface-muted"
+          className="text-fg-muted hover:bg-surface-muted flex size-7 shrink-0 items-center justify-center rounded-full"
         >
           <X size={15} aria-hidden />
         </button>
@@ -193,15 +205,15 @@ function PromoCode({ draft, coupon, onCouponChange }: BookingSummaryProps) {
           placeholder="Enter code"
           aria-invalid={error !== null}
           aria-describedby={error ? "promo-error" : undefined}
-          className="h-10 min-w-0 flex-1 rounded-sm border border-border bg-surface px-3 text-body-sm text-fg placeholder:text-fg-subtle focus:border-brand-400 focus:outline-none"
+          className="border-border bg-surface text-body-sm text-fg placeholder:text-fg-subtle focus:border-brand-400 h-10 min-w-0 flex-1 rounded-sm border px-3 focus:outline-none"
         />
         <button
           type="button"
           onClick={() => void apply()}
           disabled={pending}
           className={cn(
-            "h-10 shrink-0 rounded-sm border border-brand-500 px-4 text-label font-semibold",
-            "tracking-[0.08em] text-brand-600 uppercase disabled:opacity-50",
+            "border-brand-500 text-label h-10 shrink-0 rounded-sm border px-4 font-semibold",
+            "text-brand-600 tracking-[0.08em] uppercase disabled:opacity-50",
             "dark:text-brand-300",
           )}
         >
@@ -209,7 +221,7 @@ function PromoCode({ draft, coupon, onCouponChange }: BookingSummaryProps) {
         </button>
       </div>
       {error ? (
-        <p id="promo-error" role="alert" className="mt-2 text-body-sm text-danger">
+        <p id="promo-error" role="alert" className="text-body-sm text-danger mt-2">
           {error}
         </p>
       ) : null}

@@ -44,7 +44,9 @@ export function toHouseRuleGroups(houseRulesHtml: string | null | undefined): Ho
     const group = classify(rule.label, line);
 
     const bucket = buckets.get(group.id) ?? { id: group.id, title: group.title, rules: [] };
-    bucket.rules.push(rule);
+    // Rule text is not unique — a property can publish the same line twice — so the render key
+    // comes from position within the group, not from the sentence.
+    bucket.rules.push({ id: `${group.id}-${bucket.rules.length}`, ...rule });
     buckets.set(group.id, bucket);
   }
 

@@ -4,6 +4,7 @@ import { I18nProvider, RouterProvider } from "@heroui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { CurrencyProvider } from "@/shared/currency";
 
 export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -25,7 +26,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       {/* en-GB gives react-aria calendars Monday-first weeks, which is what guests expect here. */}
       <I18nProvider locale="en-GB">
-        <RouterProvider navigate={router.push}>{children}</RouterProvider>
+        <RouterProvider navigate={router.push}>
+          <CurrencyProvider>{children}</CurrencyProvider>
+        </RouterProvider>
       </I18nProvider>
     </QueryClientProvider>
   );

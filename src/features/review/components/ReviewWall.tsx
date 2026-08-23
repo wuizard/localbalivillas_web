@@ -25,7 +25,7 @@ export function ReviewWall({ reviews }: ReviewWallProps) {
 
       <div className="marquee marquee-mask mt-10">
         <div className="marquee-track gap-5" style={{ ["--marquee-duration" as string]: duration }}>
-          <ul className="flex gap-5 pl-5">
+          <ul className="flex gap-5 pl-5 max-md:pr-5">
             {reviews.map((review) => (
               <li key={review.id} className="flex">
                 <ReviewCard review={review} />
@@ -34,8 +34,10 @@ export function ReviewWall({ reviews }: ReviewWallProps) {
           </ul>
 
           {/* The duplicate exists only so the loop has no seam; screen readers read the
-              list once and keyboard users tab through the first copy only. */}
-          <ul className="flex gap-5 pl-5" aria-hidden inert>
+              list once and keyboard users tab through the first copy only. Below md there
+              is no loop — the rail is thumb-driven — so the second copy is just twice as
+              far to swipe. */}
+          <ul className="flex gap-5 pl-5 max-md:hidden" aria-hidden inert>
             {reviews.map((review) => (
               <li key={`echo-${review.id}`} className="flex">
                 <ReviewCard review={review} />

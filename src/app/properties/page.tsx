@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
-import { PROPERTY_TYPES, PropertyCard, getProperties, type PropertyType } from "@/features/property";
-import { criteriaFromSearchParams } from "@/features/search";
+import {
+  PROPERTY_TYPES,
+  PropertyCard,
+  getProperties,
+  type PropertyType,
+} from "@/features/property";
+import { bedroomSummary, criteriaFromSearchParams } from "@/features/search";
 
 export const metadata: Metadata = {
   title: "Villas, resorts and private retreats in Bali",
@@ -39,14 +44,21 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   const properties = all.filter(
     (property) =>
       (type === null || property.type === type) &&
-      (criteria.destination === null || property.location === criteria.destination),
+      (criteria.destination === null || property.location === criteria.destination) &&
+      // Properties publish every bedroom count they offer, so a 2-bedroom request keeps a
+      // villa that also has a 4-bedroom layout. `bedrooms` is empty for a few listings the
+      // API has not filled in — those drop out of a bedroom-filtered search rather than
+      // pretending to match.
+      (criteria.bedrooms === 0 || property.bedrooms.some((count) => count >= criteria.bedrooms)),
   );
 
   return (
     <div className="container-page py-10 md:py-14">
       <header className="flex flex-col gap-2">
-        <p className="text-label text-brand-600 uppercase dark:text-brand-300">
-          {criteria.destination ?? "All of Bali"}
+        <p className="text-label text-brand-600 dark:text-brand-300 uppercase">
+          {[criteria.destination ?? "All of Bali", bedroomSummary(criteria.bedrooms)]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
         <h1 className="font-display text-display-lg text-fg">
           {properties.length} {properties.length === 1 ? "place" : "places"} to stay
@@ -54,7 +66,7 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
       </header>
 
       {properties.length === 0 ? (
-        <p className="mt-12 text-body text-fg-muted">
+        <p className="text-body text-fg-muted mt-12">
           Nothing matches that combination yet. Try a different area or clear the filters.
         </p>
       ) : (

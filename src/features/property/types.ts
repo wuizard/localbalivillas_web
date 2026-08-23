@@ -55,7 +55,7 @@ export type RoomOffer = {
 export type HouseRuleGroup = {
   id: string;
   title: string;
-  rules: { label: string | null; value: string }[];
+  rules: { id: string; label: string | null; value: string }[];
 };
 
 export type PropertyDetail = PropertySummary & {

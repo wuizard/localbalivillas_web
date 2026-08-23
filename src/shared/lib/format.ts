@@ -21,13 +21,3 @@ export function formatIDRCompact(amount: number): string {
 export function pluralise(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
-
-/** Bare compact amount for tight surfaces such as calendar cells: "2.5M", "850k". */
-export function formatAmountCompact(amount: number): string {
-  if (amount >= 1_000_000) {
-    const millions = amount / 1_000_000;
-    return `${millions.toFixed(millions < 10 ? 1 : 0).replace(/\.0$/, "")}M`;
-  }
-  if (amount >= 1_000) return `${Math.round(amount / 1_000)}k`;
-  return String(amount);
-}

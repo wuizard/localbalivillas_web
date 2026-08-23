@@ -50,7 +50,7 @@ export function ImportantInformation({ groups }: { groups: HouseRuleGroup[] }) {
                 <div className="border-t border-border px-4 py-3.5">
                   <ul className="flex flex-col gap-2.5">
                     {group.rules.map((rule) => (
-                      <li key={rule.value} className="text-body-sm text-fg-muted">
+                      <li key={rule.id} className="text-body-sm text-fg-muted">
                         {rule.label ? (
                           <span className="font-semibold text-fg">{rule.label}: </span>
                         ) : null}

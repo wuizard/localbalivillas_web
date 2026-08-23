@@ -1,6 +1,6 @@
 import { BedDouble, MapPin, Star, Users } from "lucide-react";
 import Link from "next/link";
-import { formatIDR } from "@/shared/lib/format";
+import { Money } from "@/shared/currency";
 import { PROPERTY_TYPE_LABEL, bedroomLabel, type PropertyDetail } from "../types";
 import { ShareButton } from "@/shared/ui/ShareButton";
 import { FavouriteButton } from "./FavouriteButton";
@@ -32,7 +32,7 @@ export function PropertyHeader({ property }: { property: PropertyDetail }) {
         <div className="min-w-0">
           <h1 className="font-display text-display-lg text-fg">{property.name}</h1>
 
-          <ul className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-body-sm text-fg-muted">
+          <ul className="text-body-sm text-fg-muted mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
             <li className="flex items-center gap-1.5">
               <MapPin size={15} strokeWidth={1.7} className="text-brand-400" aria-hidden />
               {property.location}, Bali
@@ -50,7 +50,7 @@ export function PropertyHeader({ property }: { property: PropertyDetail }) {
               </li>
             ) : null}
             {property.rating ? (
-              <li className="flex items-center gap-1.5 text-fg">
+              <li className="text-fg flex items-center gap-1.5">
                 <Star size={15} className="fill-brand-500 text-brand-500" aria-hidden />
                 <span className="tabular font-semibold">{property.rating.average.toFixed(1)}</span>
                 <span className="text-fg-muted">({property.rating.count})</span>
@@ -62,8 +62,8 @@ export function PropertyHeader({ property }: { property: PropertyDetail }) {
         <div className="flex items-center gap-1 max-md:w-full max-md:justify-between md:gap-3">
           {property.fromPrice === null ? null : (
             <span className="flex flex-col md:items-end">
-              <span className="text-[11px] text-fg-muted uppercase">From</span>
-              <span className="tabular text-price text-fg">{formatIDR(property.fromPrice)}</span>
+              <span className="text-fg-muted text-[11px] uppercase">From</span>
+              <Money amount={property.fromPrice} className="tabular text-price text-fg" />
               <span className="text-body-sm text-fg-muted">/ night</span>
             </span>
           )}
@@ -74,7 +74,7 @@ export function PropertyHeader({ property }: { property: PropertyDetail }) {
           <FavouriteButton
             propertyKey={property.key}
             propertyName={property.name}
-            className="relative ring-1 ring-border"
+            className="ring-border relative ring-1"
           />
         </div>
       </div>

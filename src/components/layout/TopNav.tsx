@@ -4,6 +4,7 @@ import { ChevronDown, Heart, Menu, Phone, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { CurrencySwitch } from "@/shared/currency";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 import { useLockBodyScroll } from "@/shared/hooks/useLockBodyScroll";
 import { useWishlist } from "@/shared/hooks/useWishlist";
@@ -32,19 +33,36 @@ export function TopNav() {
 
   return (
     <header
-      className="sticky top-0 z-40 max-md:glass-bar md:border-b md:border-border md:bg-surface/95 md:backdrop-blur-md"
+      className="max-md:glass-bar md:border-border md:bg-surface/95 sticky top-0 z-40 md:border-b md:backdrop-blur-md"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="relative mx-auto flex h-(--top-nav-h) max-w-[1440px] items-center gap-4 px-4 md:px-6 lg:px-8">
-        <button
-          type="button"
-          aria-label="Open menu"
-          aria-expanded={isMenuOpen}
-          onClick={() => setMenuOpen(true)}
-          className="-ml-2 flex size-10 shrink-0 items-center justify-center rounded-full text-fg hover:bg-surface-muted lg:hidden"
-        >
-          <Menu size={22} strokeWidth={1.7} aria-hidden />
-        </button>
+        {/* Left cluster, below lg. The hamburger is hidden on phones — they navigate from
+            the bottom bar (DESIGN.md §4.1) and a second, competing entry point in the
+            top-left is noise. It returns on tablets, which get neither the bottom bar's
+            prominence nor the desktop nav. Calling takes the slot it leaves, which also
+            keeps the right-hand controls narrow enough not to crowd the centred logo. */}
+        <div className="-ml-2 flex shrink-0 items-center lg:hidden">
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={isMenuOpen}
+            onClick={() => setMenuOpen(true)}
+            className="text-fg hover:bg-surface-muted hidden size-10 items-center justify-center rounded-full md:flex"
+          >
+            <Menu size={22} strokeWidth={1.7} aria-hidden />
+          </button>
+
+          {/* Booking by phone is the highest-intent action on mobile, so it stays in the
+              chrome; the wishlist it displaces lives in the bottom nav there. */}
+          <a
+            href={`tel:+${site.whatsapp}`}
+            aria-label={`Call us on ${site.phoneDisplay}`}
+            className="text-fg hover:bg-surface-muted hover:text-brand-600 flex size-10 items-center justify-center rounded-full transition-colors"
+          >
+            <Phone size={20} strokeWidth={1.7} aria-hidden />
+          </a>
+        </div>
 
         {/* Taken out of flow so it is centred on the bar itself, not on the free space left
             over between the controls — those two clusters are different widths, and `mx-auto`
@@ -68,7 +86,7 @@ export function TopNav() {
               aria-haspopup="menu"
               onClick={() => setVillasOpen(!isVillasOpen)}
               className={cn(
-                "flex items-center gap-1.5 text-label uppercase transition-colors duration-[120ms]",
+                "text-label flex items-center gap-1.5 uppercase transition-colors duration-[120ms]",
                 pathname.startsWith("/properties") || isVillasOpen
                   ? "text-brand-600 dark:text-brand-300"
                   : "text-fg hover:text-brand-600",
@@ -85,14 +103,14 @@ export function TopNav() {
             {isVillasOpen ? (
               <ul
                 role="menu"
-                className="absolute top-[calc(100%+14px)] left-1/2 z-30 w-56 -translate-x-1/2 rounded-md border border-border bg-surface p-1.5 shadow-lg"
+                className="border-border bg-surface absolute top-[calc(100%+14px)] left-1/2 z-30 w-56 -translate-x-1/2 rounded-md border p-1.5 shadow-lg"
               >
                 {propertyTypes.map((type) => (
                   <li key={type.value} role="none">
                     <Link
                       role="menuitem"
                       href={type.href}
-                      className="block rounded-sm px-3 py-2.5 text-body text-fg transition-colors hover:bg-surface-muted hover:text-brand-600"
+                      className="text-body text-fg hover:bg-surface-muted hover:text-brand-600 block rounded-sm px-3 py-2.5 transition-colors"
                     >
                       {type.label}
                     </Link>
@@ -112,29 +130,21 @@ export function TopNav() {
         {/* ml-auto pins this right now the logo no longer occupies flow; on lg the centred
             nav does that job, so a second auto margin here would pull it off centre. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3 lg:ml-0">
-          {/* Booking by phone is the highest-intent action on mobile, so it gets the slot
-              the wishlist holds on desktop. The wishlist lives in the bottom nav there. */}
-          <a
-            href={`tel:+${site.whatsapp}`}
-            aria-label={`Call us on ${site.phoneDisplay}`}
-            className="-mr-2 flex size-10 items-center justify-center rounded-full text-fg transition-colors hover:bg-surface-muted hover:text-brand-600 lg:hidden"
-          >
-            <Phone size={20} strokeWidth={1.7} aria-hidden />
-          </a>
-
           <ThemeToggle className="max-lg:hidden" />
+
+          <CurrencySwitch />
 
           <LanguageSwitch />
 
           <Link
             href="/wishlist"
             aria-label={`Wishlist, ${wishlist.count} saved`}
-            className="relative hidden size-10 items-center justify-center rounded-full text-fg transition-colors hover:bg-surface-muted hover:text-brand-600 lg:flex"
+            className="text-fg hover:bg-surface-muted hover:text-brand-600 relative hidden size-10 items-center justify-center rounded-full transition-colors lg:flex"
           >
             <Heart size={19} strokeWidth={1.7} aria-hidden />
             <span
               aria-hidden
-              className="tabular absolute top-1 right-0.5 flex size-4 items-center justify-center rounded-full bg-brand-500 text-[10px] font-semibold text-white"
+              className="tabular bg-brand-500 absolute top-1 right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-semibold text-white"
             >
               {wishlist.count}
             </span>
@@ -178,7 +188,7 @@ function NavLink({
 /** English is the only locale in v1; the control exists so the nav does not shift when more land. */
 function LanguageSwitch() {
   return (
-    <span className="hidden items-center gap-1 rounded-sm px-2 py-1.5 text-label text-fg-muted uppercase md:flex">
+    <span className="text-label text-fg-muted hidden items-center gap-1 rounded-sm px-2 py-1.5 uppercase md:flex">
       EN
       <ChevronDown size={13} aria-hidden />
     </span>
@@ -195,14 +205,14 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
       />
 
-      <div className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm flex-col bg-surface shadow-lg">
-        <div className="flex items-center justify-between border-b border-border px-4 py-4">
+      <div className="bg-surface absolute inset-y-0 left-0 flex w-[86%] max-w-sm flex-col shadow-lg">
+        <div className="border-border flex items-center justify-between border-b px-4 py-4">
           <Logo width={124} />
           <button
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="flex size-10 items-center justify-center rounded-full text-fg-muted hover:bg-surface-muted"
+            className="text-fg-muted hover:bg-surface-muted flex size-10 items-center justify-center rounded-full"
           >
             <X size={20} aria-hidden />
           </button>
@@ -214,7 +224,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
               <li key={type.value}>
                 <Link
                   href={type.href}
-                  className="block border-b border-border py-4 text-body text-fg"
+                  className="border-border text-body text-fg block border-b py-4"
                 >
                   {type.label}
                 </Link>
@@ -224,7 +234,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="block border-b border-border py-4 text-body text-fg"
+                  className="border-border text-body text-fg block border-b py-4"
                 >
                   {item.label}
                 </Link>
@@ -234,7 +244,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
         </nav>
 
         <div
-          className="border-t border-border p-4"
+          className="border-border border-t p-4"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
         >
           <ButtonLink href="/properties" size="lg" className="w-full">

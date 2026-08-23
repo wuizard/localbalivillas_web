@@ -121,6 +121,24 @@
   --field-radius: var(--radius-sm);
 }
 
+/* HeroUI strikes through every disabled day. In a stay calendar most disabled days are
+   simply in the past, and a month opening with twenty-two crossed-out numbers reads as
+   "sold out", not "over". The line stays reserved for nights that really are gone, which
+   the priced calendars draw on the day themselves. */
+[data-slot="calendar-cell"][data-disabled],
+[data-slot="range-calendar-cell"][data-disabled] {
+  text-decoration-line: none;
+}
+
+/* HeroUI caps a calendar at its seven 36px columns, which on a phone leaves a dead third
+   down the right of the search sheet. Lifting the cap is enough — the grid inside already
+   sizes its columns from the space it is given. Opt-in, because inside a desktop popover
+   content width is the right width. */
+.calendar-full {
+  width: 100%;
+  max-width: none;
+}
+
 .dark {
   --accent: var(--color-brand-400);
   --accent-foreground: var(--color-brand-900);
@@ -288,17 +306,27 @@
     animation-play-state: paused;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  /* Below md the drift becomes a rail the thumb drives. A 6rem fade at each edge eats half
+     a 375px screen, and a card that slides away on its own is one a guest cannot finish
+     reading — on a phone the wall stops being scenery and has to be legible. */
+  @media (prefers-reduced-motion: reduce), (max-width: 767px) {
     .marquee-track {
       animation: none;
       width: auto;
     }
     .marquee {
       overflow-x: auto;
+      scroll-snap-type: x proximity;
+      /* Matches the track's lead-in, or the first snap pulls the card flush to the bezel. */
+      scroll-padding-inline: 1.25rem;
       scrollbar-width: none;
+      overscroll-behavior-x: contain;
     }
     .marquee::-webkit-scrollbar {
       display: none;
+    }
+    .marquee-track > * > * {
+      scroll-snap-align: start;
     }
   }
 
@@ -318,6 +346,13 @@
       #000 calc(100% - 6rem),
       transparent
     );
+  }
+
+  @media (max-width: 767px) {
+    .marquee-mask {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
   }
 }
 
