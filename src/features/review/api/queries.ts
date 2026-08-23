@@ -1,4 +1,5 @@
 import { apiGet } from "@/shared/api";
+import { env } from "@/shared/config/env";
 import type { GuestReview } from "../types";
 import { PLACEHOLDER_REVIEWS } from "./placeholder-reviews";
 import { reviewListSchema, toGuestReview } from "./schemas";
@@ -48,9 +49,9 @@ export async function getGuestReviews(
  * starts returning data the demo copy is pushed out one card at a time, and once there are
  * twelve real reviews none of it renders at all.
  *
- * Production shows only what the API returned — publishing invented reviews under a guest's
- * name is a consumer-protection problem, not a content gap. Delete the fallback, not the
- * guard, when the endpoint is populated.
+ * Off unless `DEMO_CONTENT` is set, which is how a preview deployment shows a populated wall
+ * while `GET /reviews/:id` still returns `[]` for every property. Delete the fallback, not
+ * the guard, when the endpoint is populated.
  */
 export async function getReviewsWithFallback(
   sources: ReviewSource[],
@@ -58,7 +59,7 @@ export async function getReviewsWithFallback(
 ): Promise<GuestReview[]> {
   const real = await getGuestReviews(sources, limit);
 
-  if (process.env.NODE_ENV === "production") return real;
+  if (!env.demoContent) return real;
 
   const shortfall = limit - real.length;
   if (shortfall <= 0) return real;

@@ -15,4 +15,16 @@ export const env = {
   get siteUrl(): string {
     return process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
   },
+
+  /**
+   * Placeholder reviews and card ratings, for surfaces the API cannot fill yet. Opt-in, and
+   * one switch for both so a deployment can never show invented ratings beside a review wall
+   * that is empty — or the reverse.
+   *
+   * Never set on the public storefront: a made-up score or review on a booking page is a
+   * consumer-protection problem, not a content gap.
+   */
+  get demoContent(): boolean {
+    return process.env.DEMO_CONTENT === "1";
+  },
 } as const;

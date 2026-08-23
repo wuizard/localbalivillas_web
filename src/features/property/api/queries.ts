@@ -1,4 +1,5 @@
 import { apiGet } from "@/shared/api";
+import { env } from "@/shared/config/env";
 import type { PropertySummary } from "../types";
 import {
   propertyCapacitySchema,
@@ -18,13 +19,12 @@ function hash(value: string): number {
 
 /**
  * DEMO RATINGS. There are no reviews in the system, so `rating` is always null from the
- * API and the card's rating row never renders. Development builds synthesise a stable
- * score purely so the card design can be judged; production leaves it null, because a
- * made-up review score on a booking page is a consumer-protection problem. Delete this
- * once `GET /reviews/:propertyId` returns data.
+ * API and the card's rating row never renders. With `DEMO_CONTENT` on, a stable score is
+ * synthesised purely so the card design can be judged. Delete this once
+ * `GET /reviews/:propertyId` returns data.
  */
 function withDemoRating(property: PropertySummary): PropertySummary {
-  if (process.env.NODE_ENV === "production") return property;
+  if (!env.demoContent) return property;
 
   const seed = hash(property.key);
   return {

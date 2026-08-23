@@ -18,6 +18,7 @@ import { createPortal } from "react-dom";
 import { useLockBodyScroll } from "@/shared/hooks/useLockBodyScroll";
 import { cn } from "@/shared/lib/cn";
 import { searchHref } from "../lib/query";
+import { activeSection } from "../lib/section-spy";
 import { DEFAULT_CRITERIA, bedroomSummary, type Destination } from "../types";
 import { BedroomPicker } from "./BedroomPicker";
 import { StayRangeCalendar } from "./CalendarLayout";
@@ -91,9 +92,12 @@ function describe(draft: Draft): string {
 export function SearchSheet({ destinations, initial, className }: SearchSheetProps) {
   const router = useRouter();
   const [openStep, setOpenStep] = useState<Step | null>(null);
+  const [activeStep, setActiveStep] = useState<Step>("where");
   const [draft, setDraft] = useState<Draft>(initial);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<Partial<Record<Step, HTMLElement | null>>>({});
+  const chipRefs = useRef<Partial<Record<Step, HTMLButtonElement | null>>>({});
 
   const isOpen = openStep !== null;
   const isDirty =
@@ -106,10 +110,63 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
   useLockBodyScroll(isOpen);
 
   useEffect(() => {
-    if (!openStep) return;
+    if (!isOpen) return;
     closeRef.current?.focus();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!openStep) return;
     stepRefs.current[openStep]?.scrollIntoView({ block: "start", behavior: "auto" });
   }, [openStep]);
+
+  /**
+   * Scroll-spy for the chips. The section whose top has passed the container's is the one
+   * being read, so the chip row tracks the scroll instead of only the last chip tapped.
+   * Measured on rAF rather than an IntersectionObserver because the last section is often
+   * too short to ever cross an observer threshold — at the end of the scroll it is simply
+   * whatever is on screen.
+   */
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!isOpen || !container) return;
+
+    let frame = 0;
+
+    function update() {
+      frame = 0;
+      if (!container) return;
+      const containerTop = container.getBoundingClientRect().top;
+
+      const measured = STEPS.flatMap((step) => {
+        const section = stepRefs.current[step.id];
+        if (!section) return [];
+        return [{ id: step.id, offsetTop: section.getBoundingClientRect().top - containerTop }];
+      });
+
+      const current = activeSection(measured, {
+        atEnd: container.scrollTop + container.clientHeight >= container.scrollHeight - 8,
+      });
+
+      if (current) setActiveStep(current);
+    }
+
+    function onScroll() {
+      if (!frame) frame = requestAnimationFrame(update);
+    }
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    frame = requestAnimationFrame(update);
+
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [isOpen]);
+
+  // Four chips overflow a phone once they carry values, so the active one is kept in view.
+  useEffect(() => {
+    chipRefs.current[activeStep]?.scrollIntoView({ inline: "nearest", block: "nearest" });
+  }, [activeStep]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -181,12 +238,15 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
                 <li key={step.id}>
                   <button
                     type="button"
-                    aria-current={openStep === step.id ? "step" : undefined}
+                    ref={(el) => {
+                      chipRefs.current[step.id] = el;
+                    }}
+                    aria-current={activeStep === step.id ? "step" : undefined}
                     onClick={() => setOpenStep(step.id)}
                     className={cn(
                       "text-body-sm flex h-8 items-center gap-1.5 rounded-full border px-3 whitespace-nowrap",
                       "transition-colors duration-[120ms]",
-                      openStep === step.id
+                      activeStep === step.id
                         ? "border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300"
                         : "border-border text-fg-muted",
                     )}
@@ -203,7 +263,7 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
         </nav>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-6">
         <Section
           title="Where"
           value={draft.destination}
@@ -211,30 +271,11 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
             stepRefs.current.where = el;
           }}
         >
-          <ul className="flex flex-col">
-            {destinations.map((item) => {
-              const selected = draft.destination === item.name;
-              return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDraft((d) => ({ ...d, destination: selected ? null : item.name }))
-                    }
-                    aria-pressed={selected}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-sm px-2 py-3 text-left",
-                      selected ? "text-brand-600" : "text-fg",
-                    )}
-                  >
-                    <MapPin size={18} strokeWidth={1.6} aria-hidden className="text-brand-500" />
-                    <span className="text-body flex-1">{item.name}</span>
-                    {selected ? <Check size={18} aria-hidden /> : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <DestinationPicker
+            destinations={destinations}
+            selected={draft.destination}
+            onSelect={(name) => setDraft((d) => ({ ...d, destination: name }))}
+          />
         </Section>
 
         <Section
@@ -382,6 +423,100 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
 
 function Divider() {
   return <div aria-hidden className="bg-border mx-3 h-px" />;
+}
+
+/**
+ * Type-to-filter rather than a flat list. Today that is thirteen Bali areas, which already
+ * fill a phone screen on their own; the moment the catalogue reaches beyond Bali a flat list
+ * stops being browsable at all. The list stays under the field so areas are still
+ * discoverable to someone who does not know what to type — it is just bounded, and scrolls
+ * inside itself rather than pushing the rest of the sheet down.
+ */
+function DestinationPicker({
+  destinations,
+  selected,
+  onSelect,
+}: {
+  destinations: Destination[];
+  selected: string | null;
+  onSelect: (name: string | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const matches = needle
+    ? destinations.filter((item) => item.name.toLowerCase().includes(needle))
+    : destinations;
+
+  return (
+    <div>
+      <div className="relative">
+        <Search
+          size={17}
+          strokeWidth={1.8}
+          aria-hidden
+          className="text-fg-subtle pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+        />
+        <label htmlFor="where-search" className="sr-only">
+          Search destinations
+        </label>
+        <input
+          id="where-search"
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search destinations"
+          className={cn(
+            "border-border bg-surface text-body text-fg placeholder:text-fg-subtle",
+            "focus:border-brand-400 h-11 w-full rounded-sm border pr-10 pl-10 focus:outline-none",
+            // Safari draws its own clear affordance on type=search, right beside ours.
+            "[&::-webkit-search-cancel-button]:hidden",
+          )}
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Clear destination search"
+            className="text-fg-muted hover:text-fg absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-full"
+          >
+            <X size={16} aria-hidden />
+          </button>
+        ) : null}
+      </div>
+
+      {matches.length === 0 ? (
+        <p className="text-body-sm text-fg-muted px-2 py-4">
+          Nowhere matches “{query.trim()}”. Try a shorter search.
+        </p>
+      ) : (
+        <ul className="mt-1 max-h-64 overflow-y-auto overscroll-contain">
+          {matches.map((item) => {
+            const isSelected = selected === item.name;
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(isSelected ? null : item.name)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-sm px-2 py-3 text-left",
+                    isSelected ? "text-brand-600 dark:text-brand-300" : "text-fg",
+                  )}
+                >
+                  <MapPin size={18} strokeWidth={1.6} aria-hidden className="text-brand-500" />
+                  <span className="text-body flex-1">{item.name}</span>
+                  {isSelected ? <Check size={18} aria-hidden /> : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function SearchRow({
