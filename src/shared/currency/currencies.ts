@@ -22,6 +22,10 @@ export const CURRENCIES = [
   { code: "INR", label: "Indian Rupee", flag: "🇮🇳" },
   { code: "CAD", label: "Canadian Dollar", flag: "🇨🇦" },
   { code: "CHF", label: "Swiss Franc", flag: "🇨🇭" },
+  { code: "AED", label: "UAE Dirham", flag: "🇦🇪" },
+  { code: "VND", label: "Vietnamese Dong", flag: "🇻🇳" },
+  { code: "TWD", label: "New Taiwan Dollar", flag: "🇹🇼" },
+  { code: "RUB", label: "Russian Ruble", flag: "🇷🇺" },
 ] as const;
 
 export type CurrencyCode = (typeof CURRENCIES)[number]["code"];
@@ -44,6 +48,10 @@ export const CURRENCY_SYMBOL: Record<CurrencyCode, string> = {
   INR: "₹",
   CAD: "C$",
   CHF: "CHF",
+  AED: "AED",
+  VND: "₫",
+  TWD: "NT$",
+  RUB: "₽",
 };
 
 const CODES = new Set<string>(CURRENCIES.map((currency) => currency.code));
@@ -61,8 +69,12 @@ function formatterFor(code: CurrencyCode): Intl.NumberFormat {
   const created = new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: code,
-    currencyDisplay: "narrowSymbol",
-    // Whole units only. A converted rate is indicative, and "≈ $475.71" claims a precision
+    // `symbol`, not `narrowSymbol`: narrow renders USD, AUD, SGD, HKD, NZD, CAD *and* TWD all
+    // as plain "$", and JPY and CNY both as "¥". A guest reading "$5,751" for a Taiwan-dollar
+    // total as US dollars is off by a factor of thirty. `symbol` gives US$, A$, NT$, CN¥ —
+    // longer, and never the wrong currency.
+    currencyDisplay: "symbol",
+    // Whole units only. A converted rate is indicative, and "≈ US$475.71" claims a precision
     // the mid-market rate behind it does not have.
     maximumFractionDigits: 0,
   });
@@ -93,6 +105,12 @@ export function formatMoneyCompact(amount: number, code: CurrencyCode): string {
   }
 
   const symbol = CURRENCY_SYMBOL[code];
+  // A dong or won total runs into the millions, so the compact form needs an M step of its
+  // own — "₫12362k" in a calendar cell is not a price anyone can read at a glance.
+  if (amount >= 1_000_000) {
+    const millions = amount / 1_000_000;
+    return `${symbol}${millions.toFixed(millions < 10 ? 1 : 0).replace(/\.0$/, "")}M`;
+  }
   if (amount >= 100_000) return `${symbol}${Math.round(amount / 1_000)}k`;
   return `${symbol}${IDR_DIGITS.format(Math.round(amount))}`;
 }

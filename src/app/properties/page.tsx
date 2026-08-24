@@ -52,6 +52,19 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
       (criteria.bedrooms === 0 || property.bedrooms.some((count) => count >= criteria.bedrooms)),
   );
 
+  /**
+   * The stay travels with the guest to the property page. Without it, choosing dates and a
+   * party on the home page and then opening a villa lands on an unpriced page asking for the
+   * same answers again. The bedroom count stays behind — it filters a list, it does not
+   * describe a stay.
+   */
+  const stay = new URLSearchParams();
+  if (criteria.checkIn) stay.set("checkIn", criteria.checkIn);
+  if (criteria.checkOut) stay.set("checkOut", criteria.checkOut);
+  stay.set("adults", String(criteria.adults));
+  if (criteria.children > 0) stay.set("children", String(criteria.children));
+  const stayQuery = stay.toString();
+
   return (
     <div className="container-page py-10 md:py-14">
       <header className="flex flex-col gap-2">
@@ -73,7 +86,12 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
         <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((property, index) => (
             <li key={property.id}>
-              <PropertyCard property={property} priority={index < 4} className="h-full" />
+              <PropertyCard
+                property={property}
+                stayQuery={stayQuery}
+                priority={index < 4}
+                className="h-full"
+              />
             </li>
           ))}
         </ul>

@@ -96,7 +96,7 @@ export function SearchBar({ destinations, className }: SearchBarProps) {
         }}
         className={cn(
           "hidden md:grid",
-          "grid-cols-[1.15fr_0.95fr_0.95fr_0.8fr_1fr_auto] items-stretch",
+          "grid-cols-[1.15fr_0.8fr_1fr_0.95fr_0.95fr_auto] items-stretch",
           // Crisper than the DESIGN.md `lg` radius: at 70px tall, 22px reads as a pill.
           "bg-surface ring-border/70 rounded-[14px] p-1.5 shadow-lg ring-1",
           className,
@@ -122,22 +122,6 @@ export function SearchBar({ destinations, className }: SearchBarProps) {
             </ListBox>
           </Select.Popover>
         </Select>
-
-        <DateField
-          label="Check-in"
-          value={checkIn}
-          onChange={handleCheckIn}
-          minValue={now}
-          className="border-border border-l"
-        />
-
-        <DateField
-          label="Check-out"
-          value={checkOut}
-          onChange={handleCheckOut}
-          minValue={checkIn?.add({ days: 1 }) ?? now.add({ days: 1 })}
-          className="border-border border-l"
-        />
 
         <div className="border-border relative border-l">
           <button
@@ -212,6 +196,22 @@ export function SearchBar({ destinations, className }: SearchBarProps) {
             </div>
           ) : null}
         </div>
+
+        <DateField
+          label="Check-in"
+          value={checkIn}
+          onChange={handleCheckIn}
+          minValue={now}
+          className="border-border border-l"
+        />
+
+        <DateField
+          label="Check-out"
+          value={checkOut}
+          onChange={handleCheckOut}
+          minValue={checkIn?.add({ days: 1 }) ?? now.add({ days: 1 })}
+          className="border-border border-l"
+        />
 
         <button
           type="submit"

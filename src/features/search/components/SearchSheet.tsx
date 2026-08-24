@@ -6,6 +6,7 @@ import {
   BedDouble,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronRight,
   MapPin,
   Search,
@@ -18,7 +19,6 @@ import { createPortal } from "react-dom";
 import { useLockBodyScroll } from "@/shared/hooks/useLockBodyScroll";
 import { cn } from "@/shared/lib/cn";
 import { searchHref } from "../lib/query";
-import { activeSection } from "../lib/section-spy";
 import { DEFAULT_CRITERIA, bedroomSummary, type Destination } from "../types";
 import { BedroomPicker } from "./BedroomPicker";
 import { StayRangeCalendar } from "./CalendarLayout";
@@ -58,26 +58,6 @@ function formatStay(checkIn: CalendarDate | null, checkOut: CalendarDate | null)
   return `${from} – ${format(checkOut.toDate(zone), "d MMM")}`;
 }
 
-const STEPS = [
-  { id: "where", label: "Where" },
-  { id: "when", label: "When" },
-  { id: "bedrooms", label: "Beds" },
-  { id: "who", label: "Who" },
-] as const satisfies readonly { id: Step; label: string }[];
-
-function summaryFor(step: Step, draft: Draft): string | null {
-  switch (step) {
-    case "where":
-      return draft.destination;
-    case "when":
-      return formatStay(draft.checkIn, draft.checkOut);
-    case "bedrooms":
-      return bedroomSummary(draft.bedrooms)?.replace(/ bedrooms?$/, "") ?? null;
-    case "who":
-      return guestTotal(draft.adults, draft.children);
-  }
-}
-
 /** The one-line recap above the submit button, so the CTA is never a blind press. */
 function describe(draft: Draft): string {
   const parts = [
@@ -92,12 +72,10 @@ function describe(draft: Draft): string {
 export function SearchSheet({ destinations, initial, className }: SearchSheetProps) {
   const router = useRouter();
   const [openStep, setOpenStep] = useState<Step | null>(null);
-  const [activeStep, setActiveStep] = useState<Step>("where");
   const [draft, setDraft] = useState<Draft>(initial);
   const closeRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<Partial<Record<Step, HTMLElement | null>>>({});
-  const chipRefs = useRef<Partial<Record<Step, HTMLButtonElement | null>>>({});
 
   const isOpen = openStep !== null;
   const isDirty =
@@ -114,59 +92,24 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
     closeRef.current?.focus();
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!openStep) return;
-    stepRefs.current[openStep]?.scrollIntoView({ block: "start", behavior: "auto" });
-  }, [openStep]);
-
   /**
-   * Scroll-spy for the chips. The section whose top has passed the container's is the one
-   * being read, so the chip row tracks the scroll instead of only the last chip tapped.
-   * Measured on rAF rather than an IntersectionObserver because the last section is often
-   * too short to ever cross an observer threshold — at the end of the scroll it is simply
-   * whatever is on screen.
+   * Bring the step that just opened to the top of the sheet — which is what makes finishing
+   * one step feel like being handed the next.
+   *
+   * Measured against the container and set outright rather than `scrollIntoView`: opening a
+   * step collapses another, so the page shrinks in the same commit. A smooth scroll animates
+   * toward a position computed before that reflow and lands past it, which is how the month
+   * heading ended up above the fold.
    */
   useEffect(() => {
     const container = scrollRef.current;
-    if (!isOpen || !container) return;
+    const section = openStep ? stepRefs.current[openStep] : null;
+    if (!container || !section) return;
 
-    let frame = 0;
-
-    function update() {
-      frame = 0;
-      if (!container) return;
-      const containerTop = container.getBoundingClientRect().top;
-
-      const measured = STEPS.flatMap((step) => {
-        const section = stepRefs.current[step.id];
-        if (!section) return [];
-        return [{ id: step.id, offsetTop: section.getBoundingClientRect().top - containerTop }];
-      });
-
-      const current = activeSection(measured, {
-        atEnd: container.scrollTop + container.clientHeight >= container.scrollHeight - 8,
-      });
-
-      if (current) setActiveStep(current);
-    }
-
-    function onScroll() {
-      if (!frame) frame = requestAnimationFrame(update);
-    }
-
-    container.addEventListener("scroll", onScroll, { passive: true });
-    frame = requestAnimationFrame(update);
-
-    return () => {
-      container.removeEventListener("scroll", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [isOpen]);
-
-  // Four chips overflow a phone once they carry values, so the active one is kept in view.
-  useEffect(() => {
-    chipRefs.current[activeStep]?.scrollIntoView({ inline: "nearest", block: "nearest" });
-  }, [activeStep]);
+    const delta = section.getBoundingClientRect().top - container.getBoundingClientRect().top;
+    if (Math.abs(delta) < 2) return;
+    container.scrollTop += delta;
+  }, [openStep]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -199,7 +142,7 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
       className="bg-bg fixed inset-0 z-[70] flex flex-col"
     >
       <header
-        className="border-border bg-bg border-b px-4 pb-2"
+        className="border-border bg-bg border-b px-4 pb-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
       >
         <div className="flex items-center justify-between gap-2">
@@ -226,47 +169,14 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
             </button>
           </div>
         </div>
-
-        {/* Four sections is more than one phone screen, so the sheet carries its own index.
-            Each chip shows what is chosen, which doubles as the answer to "what did I
-            already fill in?" without scrolling back up. */}
-        <nav aria-label="Search steps" className="no-scrollbar -mx-4 mt-1 overflow-x-auto">
-          <ul className="flex w-max gap-1.5 px-4 pb-1">
-            {STEPS.map((step) => {
-              const summary = summaryFor(step.id, draft);
-              return (
-                <li key={step.id}>
-                  <button
-                    type="button"
-                    ref={(el) => {
-                      chipRefs.current[step.id] = el;
-                    }}
-                    aria-current={activeStep === step.id ? "step" : undefined}
-                    onClick={() => setOpenStep(step.id)}
-                    className={cn(
-                      "text-body-sm flex h-8 items-center gap-1.5 rounded-full border px-3 whitespace-nowrap",
-                      "transition-colors duration-[120ms]",
-                      activeStep === step.id
-                        ? "border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300"
-                        : "border-border text-fg-muted",
-                    )}
-                  >
-                    <span className="text-fg font-medium">{step.label}</span>
-                    {/* Only the answers are spelled out. Four "Anywhere / Any dates / Any"
-                      placeholders push the last chip off a 375px screen to say nothing. */}
-                    {summary ? <span className="truncate">{summary}</span> : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-6">
         <Section
           title="Where"
           value={draft.destination}
+          isOpen={openStep === "where"}
+          onOpen={() => setOpenStep("where")}
           onMount={(el) => {
             stepRefs.current.where = el;
           }}
@@ -274,53 +184,36 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
           <DestinationPicker
             destinations={destinations}
             selected={draft.destination}
-            onSelect={(name) => setDraft((d) => ({ ...d, destination: name }))}
-          />
-        </Section>
-
-        <Section
-          title="When"
-          value={formatStay(draft.checkIn, draft.checkOut)}
-          onMount={(el) => {
-            stepRefs.current.when = el;
-          }}
-        >
-          <StayRangeCalendar
-            aria-label="Stay dates"
-            className="calendar-full"
-            minValue={today(getLocalTimeZone())}
-            value={
-              draft.checkIn && draft.checkOut ? { start: draft.checkIn, end: draft.checkOut } : null
-            }
-            onChange={(range) =>
-              setDraft((d) => {
-                if (!range) return { ...d, checkIn: null, checkOut: null };
-                // Tapping one day twice is a same-day range in react-aria, which is zero
-                // nights. Treat it as "one night from here" instead of a stay nobody can book.
-                const end =
-                  range.end.compare(range.start) <= 0 ? range.start.add({ days: 1 }) : range.end;
-                return { ...d, checkIn: range.start, checkOut: end };
-              })
-            }
+            onSelect={(name) => {
+              setDraft((d) => ({ ...d, destination: name }));
+              if (name) setOpenStep("bedrooms");
+            }}
           />
         </Section>
 
         <Section
           title="Bedrooms"
           value={bedroomSummary(draft.bedrooms)}
+          isOpen={openStep === "bedrooms"}
+          onOpen={() => setOpenStep("bedrooms")}
           onMount={(el) => {
             stepRefs.current.bedrooms = el;
           }}
         >
           <BedroomPicker
             value={draft.bedrooms}
-            onChange={(bedrooms) => setDraft((d) => ({ ...d, bedrooms }))}
+            onChange={(bedrooms) => {
+              setDraft((d) => ({ ...d, bedrooms }));
+              setOpenStep("who");
+            }}
           />
         </Section>
 
         <Section
           title="Who"
           value={guestTotal(draft.adults, draft.children)}
+          isOpen={openStep === "who"}
+          onOpen={() => setOpenStep("who")}
           onMount={(el) => {
             stepRefs.current.who = el;
           }}
@@ -341,6 +234,37 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
             min={0}
             max={MAX_CHILDREN}
             onChange={(children) => setDraft((d) => ({ ...d, children }))}
+          />
+        </Section>
+
+        <Section
+          title="When"
+          value={formatStay(draft.checkIn, draft.checkOut)}
+          isOpen={openStep === "when"}
+          onOpen={() => setOpenStep("when")}
+          onMount={(el) => {
+            stepRefs.current.when = el;
+          }}
+        >
+          <StayRangeCalendar
+            aria-label="Stay dates"
+            className="calendar-full"
+            minValue={today(getLocalTimeZone())}
+            value={
+              draft.checkIn && draft.checkOut ? { start: draft.checkIn, end: draft.checkOut } : null
+            }
+            // Only fires once both ends are chosen, which is exactly when the step is done.
+            onChange={(range) => {
+              if (!range) {
+                setDraft((d) => ({ ...d, checkIn: null, checkOut: null }));
+                return;
+              }
+              // Tapping one day twice is a same-day range in react-aria, which is zero
+              // nights. Treat it as "one night from here" instead of a stay nobody can book.
+              const end =
+                range.end.compare(range.start) <= 0 ? range.start.add({ days: 1 }) : range.end;
+              setDraft((d) => ({ ...d, checkIn: range.start, checkOut: end }));
+            }}
           />
         </Section>
       </div>
@@ -374,14 +298,6 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
         />
         <Divider />
         <SearchRow
-          icon={CalendarDays}
-          label="Dates"
-          value={formatStay(draft.checkIn, draft.checkOut)}
-          placeholder="Select dates"
-          onPress={() => setOpenStep("when")}
-        />
-        <Divider />
-        <SearchRow
           icon={BedDouble}
           label="Bedrooms"
           value={bedroomSummary(draft.bedrooms)}
@@ -395,6 +311,14 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
           value={guestTotal(draft.adults, draft.children)}
           placeholder="Add guests"
           onPress={() => setOpenStep("who")}
+        />
+        <Divider />
+        <SearchRow
+          icon={CalendarDays}
+          label="Dates"
+          value={formatStay(draft.checkIn, draft.checkOut)}
+          placeholder="Select dates"
+          onPress={() => setOpenStep("when")}
         />
 
         <button
@@ -561,24 +485,59 @@ function SearchRow({
   );
 }
 
+/**
+ * One step open at a time. Four expanded sections is three screens of scrolling for a form
+ * with four answers in it; collapsed, every answer already given is visible at a glance and
+ * the one being asked for is the only thing on screen. A step that is already open does not
+ * close on a second tap — collapsing all four would leave the sheet showing nothing.
+ */
 function Section({
   title,
   value,
+  isOpen,
+  onOpen,
   onMount,
   children,
 }: {
   title: string;
   value: string | null;
+  isOpen: boolean;
+  onOpen: () => void;
   onMount: (el: HTMLElement | null) => void;
   children: React.ReactNode;
 }) {
   return (
-    <section ref={onMount} className="border-border scroll-mt-2 border-b py-4 last:border-b-0">
-      <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <h3 className="text-label text-fg-muted uppercase">{title}</h3>
-        {value ? <p className="text-body-sm text-fg truncate font-medium">{value}</p> : null}
-      </div>
-      {children}
+    <section ref={onMount} className="border-border scroll-mt-2 border-b last:border-b-0">
+      <h3>
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-expanded={isOpen}
+          className="flex w-full items-baseline justify-between gap-3 py-4 text-left"
+        >
+          <span className="text-label text-fg-muted uppercase">{title}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              className={cn(
+                "text-body-sm truncate",
+                value ? "text-fg font-medium" : "text-fg-subtle",
+              )}
+            >
+              {value ?? "Any"}
+            </span>
+            <ChevronDown
+              size={16}
+              aria-hidden
+              className={cn(
+                "text-fg-subtle shrink-0 transition-transform duration-200",
+                isOpen && "rotate-180",
+              )}
+            />
+          </span>
+        </button>
+      </h3>
+
+      {isOpen ? <div className="pb-5">{children}</div> : null}
     </section>
   );
 }

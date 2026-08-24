@@ -10,8 +10,9 @@ import { useLockBodyScroll } from "@/shared/hooks/useLockBodyScroll";
 import { useWishlist } from "@/shared/hooks/useWishlist";
 import { cn } from "@/shared/lib/cn";
 import { primaryNav, propertyTypes, site } from "@/shared/config/site";
-import { ButtonLink, Logo } from "@/shared/ui";
+import { BackButton, ButtonLink, Logo } from "@/shared/ui";
 import { ThemeToggle } from "@/shared/ui/ThemeToggle";
+import { backFallbackFor, isPropertyDetail } from "./routes";
 
 export function TopNav() {
   const pathname = usePathname();
@@ -22,6 +23,7 @@ export function TopNav() {
     triggerRef: villasTriggerRef,
   } = useDismissable<HTMLDivElement>();
   const wishlist = useWishlist();
+  const isDetail = isPropertyDetail(pathname);
 
   // The route the menu was opened on. Navigating away changes `pathname`, which closes
   // the menu by derivation rather than by a setState in an effect.
@@ -37,11 +39,22 @@ export function TopNav() {
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="relative mx-auto flex h-(--top-nav-h) max-w-[1440px] items-center gap-4 px-4 md:px-6 lg:px-8">
-        {/* Tablet-only left cluster. Phones carry neither control: they navigate from the
-            bottom bar (DESIGN.md §4.1), and calling is reachable from the WhatsApp button
-            and the footer — a bare left edge keeps the top bar to the logo and the one
-            control that changes what the page says. Tablets get both, having neither the
-            bottom bar's prominence nor the desktop nav. */}
+        {/* On a phone, a property page swaps the bottom tabs for a back arrow in the bar —
+            the way an app behaves when you are pushed onto a detail screen. */}
+        {isDetail ? (
+          <BackButton
+            href={backFallbackFor(pathname)}
+            label="Back"
+            iconOnly
+            className="-ml-2 shrink-0 md:hidden"
+          />
+        ) : null}
+
+        {/* Tablet-only left cluster. Phones carry neither control on a listing page: they
+            navigate from the bottom bar (DESIGN.md §4.1), and calling is reachable from the
+            WhatsApp button and the footer — a bare left edge keeps the top bar to the logo
+            and the one control that changes what the page says. Tablets get both, having
+            neither the bottom bar's prominence nor the desktop nav. */}
         <div className="-ml-2 hidden shrink-0 items-center md:flex lg:hidden">
           <button
             type="button"

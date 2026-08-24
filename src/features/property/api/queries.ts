@@ -10,7 +10,7 @@ import {
 
 const PROPERTIES_REVALIDATE_SECONDS = 300;
 
-/** Stable hash of the property key, so a demo rating never changes between renders. */
+/** Stable hash of the property key, so a demo review count never changes between renders. */
 function hash(value: string): number {
   let out = 0;
   for (let i = 0; i < value.length; i += 1) out = (out * 31 + value.charCodeAt(i)) >>> 0;
@@ -19,20 +19,20 @@ function hash(value: string): number {
 
 /**
  * DEMO RATINGS. There are no reviews in the system, so `rating` is always null from the
- * API and the card's rating row never renders. With `DEMO_CONTENT` on, a stable score is
+ * API and the card's rating row never renders. With `DEMO_CONTENT` on, a score is
  * synthesised purely so the card design can be judged. Delete this once
  * `GET /reviews/:propertyId` returns data.
+ *
+ * Five across the board, matching the demo review copy — every placeholder review is five
+ * stars, so any average derived from them is five, and a card showing 4.3 beside a review
+ * list of nothing but five-star entries contradicts itself. Only the count varies.
  */
 function withDemoRating(property: PropertySummary): PropertySummary {
   if (!env.demoContent) return property;
 
-  const seed = hash(property.key);
   return {
     ...property,
-    rating: {
-      average: 4.5 + ((seed >> 3) % 6) / 10,
-      count: 24 + (seed % 140),
-    },
+    rating: { average: 5, count: 24 + (hash(property.key) % 140) },
   };
 }
 

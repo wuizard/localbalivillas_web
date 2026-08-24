@@ -22,6 +22,11 @@ export function searchHref(criteria: SearchCriteria, pathname = "/properties"): 
 }
 
 function positiveInt(value: string | null, fallback: number): number {
+  // `Number(null)` and `Number("")` are both 0, not NaN, so an absent param has to be caught
+  // before parsing — otherwise a link with no `adults` reads as zero adults and the default
+  // never applies. `criteriaToSearchParams` omits the default, so absent is the common case.
+  if (value === null || value.trim() === "") return fallback;
+
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }

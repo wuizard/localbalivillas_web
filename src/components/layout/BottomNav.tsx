@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { cn } from "@/shared/lib/cn";
+import { showsBottomNav } from "./routes";
 
 const ITEMS = [
   { href: "/", label: "Explore", icon: Compass },
@@ -117,80 +118,89 @@ export function BottomNav() {
     event.stopPropagation();
   }
 
-  // The booking funnel must not offer an exit.
-  if (pathname.startsWith("/booking")) return null;
+  if (!showsBottomNav(pathname)) return null;
 
   const highlightIndex = drag?.index ?? activeIndex;
 
   return (
-    <nav
-      aria-label="Primary"
-      className="fixed inset-x-3 z-50 md:hidden"
-      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
-    >
-      <ul
-        ref={listRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onClickCapture={onClickCapture}
-        // Vertical gestures still scroll the page; horizontal ones are ours.
-        className="glass relative flex h-[62px] touch-pan-y items-stretch rounded-[22px] px-1.5"
+    <>
+      {/* In flow, so the last row of content clears the floating bar — and so it disappears
+          along with it rather than leaving 82px of dead space on the pages that hide it. */}
+      <div
+        aria-hidden
+        className="md:hidden"
+        style={{ height: "calc(env(safe-area-inset-bottom, 0px) + 82px)" }}
+      />
+
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-3 z-50 md:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
       >
-        {pill.w > 0 ? (
-          <li
-            aria-hidden
-            className={cn(
-              // A white capsule vanishes on the near-white glass over light content, so the
-              // active state carries a brand tint and a rim rather than just extra brightness.
-              // `left-0` matters: without it the pill's static position is the bar's padding
-              // edge, so translateX(offsetLeft) would add that padding a second time.
-              "absolute inset-y-1.5 left-0 rounded-[17px] bg-brand-500/16 ring-1 ring-brand-500/25 ring-inset",
-              "dark:bg-white/14 dark:ring-white/20",
-              "shadow-[inset_0_1px_0_0_rgb(255_255_255/.55)]",
-              // Follows the finger 1:1 while dragging, eases only when it snaps home.
-              drag
-                ? "transition-none"
-                : "transition-[transform,width] duration-[420ms] ease-[var(--ease-glass)] motion-reduce:transition-none",
-            )}
-            style={{
-              transform: `translateX(${drag?.x ?? pill.x}px)`,
-              width: pill.w,
-              willChange: "transform",
-            }}
-          />
-        ) : null}
+        <ul
+          ref={listRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onClickCapture={onClickCapture}
+          // Vertical gestures still scroll the page; horizontal ones are ours.
+          className="glass relative flex h-[62px] touch-pan-y items-stretch rounded-[22px] px-1.5"
+        >
+          {pill.w > 0 ? (
+            <li
+              aria-hidden
+              className={cn(
+                // A white capsule vanishes on the near-white glass over light content, so the
+                // active state carries a brand tint and a rim rather than just extra brightness.
+                // `left-0` matters: without it the pill's static position is the bar's padding
+                // edge, so translateX(offsetLeft) would add that padding a second time.
+                "bg-brand-500/16 ring-brand-500/25 absolute inset-y-1.5 left-0 rounded-[17px] ring-1 ring-inset",
+                "dark:bg-white/14 dark:ring-white/20",
+                "shadow-[inset_0_1px_0_0_rgb(255_255_255/.55)]",
+                // Follows the finger 1:1 while dragging, eases only when it snaps home.
+                drag
+                  ? "transition-none"
+                  : "transition-[transform,width] duration-[420ms] ease-[var(--ease-glass)] motion-reduce:transition-none",
+              )}
+              style={{
+                transform: `translateX(${drag?.x ?? pill.x}px)`,
+                width: pill.w,
+                willChange: "transform",
+              }}
+            />
+          ) : null}
 
-        {ITEMS.map(({ href, label, icon: Icon }, index) => {
-          const isHighlighted = index === highlightIndex;
+          {ITEMS.map(({ href, label, icon: Icon }, index) => {
+            const isHighlighted = index === highlightIndex;
 
-          return (
-            <li key={href} data-nav-index={index} className="flex-1">
-              <Link
-                href={href}
-                draggable={false}
-                aria-current={index === activeIndex ? "page" : undefined}
-                className={cn(
-                  "relative flex h-full flex-col items-center justify-center gap-1 rounded-[17px]",
-                  "text-fg-muted transition-colors duration-[120ms] select-none",
-                  !drag && "active:scale-[0.97]",
-                  "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500",
-                  isHighlighted && "text-brand-700 dark:text-brand-300",
-                )}
-              >
-                <Icon
-                  size={21}
-                  strokeWidth={isHighlighted ? 2.2 : 1.8}
-                  aria-hidden
-                  className={cn(isHighlighted && href === "/wishlist" && "fill-current")}
-                />
-                <span className="text-[11px] leading-none font-semibold">{label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+            return (
+              <li key={href} data-nav-index={index} className="flex-1">
+                <Link
+                  href={href}
+                  draggable={false}
+                  aria-current={index === activeIndex ? "page" : undefined}
+                  className={cn(
+                    "relative flex h-full flex-col items-center justify-center gap-1 rounded-[17px]",
+                    "text-fg-muted transition-colors duration-[120ms] select-none",
+                    !drag && "active:scale-[0.97]",
+                    "focus-visible:outline-brand-500 focus-visible:outline-2 focus-visible:-outline-offset-2",
+                    isHighlighted && "text-brand-700 dark:text-brand-300",
+                  )}
+                >
+                  <Icon
+                    size={21}
+                    strokeWidth={isHighlighted ? 2.2 : 1.8}
+                    aria-hidden
+                    className={cn(isHighlighted && href === "/wishlist" && "fill-current")}
+                  />
+                  <span className="text-[11px] leading-none font-semibold">{label}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
   );
 }

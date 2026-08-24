@@ -8,14 +8,22 @@ import { FavouriteButton } from "./FavouriteButton";
 
 type PropertyCardProps = {
   property: PropertySummary;
+  /** Dates and party, already encoded, so the property page opens on the chosen stay. */
+  stayQuery?: string;
   /** The first card above the fold carries the LCP image on the results page. */
   priority?: boolean;
   className?: string;
 };
 
-export function PropertyCard({ property, priority = false, className }: PropertyCardProps) {
+export function PropertyCard({
+  property,
+  stayQuery,
+  priority = false,
+  className,
+}: PropertyCardProps) {
   const cover = property.images[0];
   const beds = bedroomLabel(property.bedrooms);
+  const href = stayQuery ? `${property.href}?${stayQuery}` : property.href;
 
   return (
     <article
@@ -48,7 +56,7 @@ export function PropertyCard({ property, priority = false, className }: Property
       <div className="flex flex-1 flex-col gap-1.5 p-3.5">
         <h3 className="font-display text-title text-fg leading-snug">
           <Link
-            href={property.href}
+            href={href}
             className="outline-none after:absolute after:inset-0 after:content-['']"
           >
             {property.name}

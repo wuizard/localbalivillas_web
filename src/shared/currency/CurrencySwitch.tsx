@@ -25,9 +25,13 @@ export function CurrencySwitch({ className }: { className?: string }) {
           isOpen ? "bg-surface-muted text-brand-600" : "text-fg-muted hover:text-brand-600",
         )}
       >
-        <span aria-hidden className="font-semibold">
-          {CURRENCY_SYMBOL[currency]}
-        </span>
+        {/* AED and CHF have no distinct glyph, so their "symbol" is the code — printing both
+            gives "AED AED". */}
+        {CURRENCY_SYMBOL[currency] === currency ? null : (
+          <span aria-hidden className="font-semibold">
+            {CURRENCY_SYMBOL[currency]}
+          </span>
+        )}
         {currency}
         <ChevronDown
           size={13}

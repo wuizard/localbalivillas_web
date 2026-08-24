@@ -101,8 +101,19 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   });
 
   const value = useMemo<CurrencyContextValue>(() => {
-    const rate = currency === BASE_CURRENCY ? null : (data?.rates[currency] ?? null);
-    // Until a rate lands, prices stay in rupiah. A converted number is a claim about money,
+    /**
+     * The live response first, then the compiled snapshot for that one currency.
+     *
+     * The snapshot is not just an offline story: `/api/fx` is cached for twelve hours, so the
+     * deploy that adds a currency serves a response that predates it and has no rate for it.
+     * Without this the guest picks Vietnamese Dong, the nav agrees, and every price stays in
+     * rupiah until the cache turns over — which reads as the feature being broken.
+     */
+    const live = currency === BASE_CURRENCY ? null : (data?.rates[currency] ?? null);
+    const rate =
+      live ?? (currency === BASE_CURRENCY ? null : FALLBACK_RATES.rates[currency]) ?? null;
+
+    // With no rate at all, prices stay in rupiah. A converted number is a claim about money,
     // and a guessed one is worse than the currency the guest did not ask for.
     const effective: CurrencyCode = rate === null ? BASE_CURRENCY : currency;
     const toDisplay = (idr: number) => (rate === null ? idr : idr * rate);
@@ -111,7 +122,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       currency,
       setCurrency,
       rate,
-      ratesDate: rate === null ? null : (data?.date ?? null),
+      ratesDate: rate === null ? null : live === null ? FALLBACK_RATES.date : (data?.date ?? null),
       format: (idr) => formatMoney(toDisplay(idr), effective),
       formatCompact: (idr) => formatMoneyCompact(toDisplay(idr), effective),
     };

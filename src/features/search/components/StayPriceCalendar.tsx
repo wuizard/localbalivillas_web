@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar } from "@heroui/react";
+import { RangeCalendar } from "@heroui/react";
 import type { CalendarDate, DateValue } from "@internationalized/date";
 import { getLocalTimeZone, today } from "@internationalized/date";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -40,57 +40,66 @@ function DayContents({ date, rooms }: { date: DateValue; rooms: PricedRoom[] }) 
   );
 }
 
-type SingleProps = {
-  rooms: PricedRoom[];
-  value: CalendarDate | null;
-  onChange: (next: CalendarDate) => void;
-  minValue?: CalendarDate;
-  label: string;
-};
+type StayRange = { start: CalendarDate; end: CalendarDate };
 
 /**
- * One field, one date. The availability bar used a range calendar behind both the check-in
- * and the check-out trigger, so a click in the check-out popover restarted the range and
- * silently rewrote the check-in — picking a departure date was impossible.
+ * One calendar, both ends. A guest picking a stay picks a stay — arrival then departure in
+ * two taps on one grid, with the nights between them filled in. Splitting it into a
+ * check-in picker and a check-out picker made each field truthful in isolation and the
+ * range invisible.
  */
-export function DayPriceCalendar({ rooms, value, onChange, minValue, label }: SingleProps) {
+export function StayPriceCalendar({
+  rooms,
+  value,
+  onChange,
+}: {
+  rooms: PricedRoom[];
+  value: StayRange | null;
+  onChange: (range: StayRange) => void;
+}) {
   const now = today(getLocalTimeZone());
 
   return (
-    <Calendar
-      aria-label={label}
-      minValue={minValue ?? now}
+    <RangeCalendar
+      aria-label="Stay dates"
+      className="calendar-full"
+      minValue={now}
       value={value}
-      onChange={onChange}
+      onChange={(range) => {
+        // Tapping one day twice is a same-day range in react-aria, which is zero nights.
+        // Read it as "one night from here" rather than a stay nobody can book.
+        const end = range.end.compare(range.start) <= 0 ? range.start.add({ days: 1 }) : range.end;
+        onChange({ start: range.start, end });
+      }}
       isDateUnavailable={(date) => isSoldOut(rooms, iso(date))}
     >
-      <Calendar.Header className="mb-2 flex items-center justify-between gap-2">
-        <Calendar.NavButton slot="previous" aria-label="Previous month">
+      <RangeCalendar.Header className="mb-2 flex items-center justify-between gap-2">
+        <RangeCalendar.NavButton slot="previous" aria-label="Previous month">
           <ChevronLeft size={18} aria-hidden />
-        </Calendar.NavButton>
-        <Calendar.Heading className="font-display text-title text-fg" />
-        <Calendar.NavButton slot="next" aria-label="Next month">
+        </RangeCalendar.NavButton>
+        <RangeCalendar.Heading className="font-display text-title text-fg" />
+        <RangeCalendar.NavButton slot="next" aria-label="Next month">
           <ChevronRight size={18} aria-hidden />
-        </Calendar.NavButton>
-      </Calendar.Header>
+        </RangeCalendar.NavButton>
+      </RangeCalendar.Header>
 
-      <Calendar.Grid>
-        <Calendar.GridHeader>
+      <RangeCalendar.Grid>
+        <RangeCalendar.GridHeader>
           {(day) => (
-            <Calendar.HeaderCell className="text-label text-fg-muted uppercase">
+            <RangeCalendar.HeaderCell className="text-label text-fg-muted uppercase">
               {day}
-            </Calendar.HeaderCell>
+            </RangeCalendar.HeaderCell>
           )}
-        </Calendar.GridHeader>
+        </RangeCalendar.GridHeader>
 
-        <Calendar.GridBody>
+        <RangeCalendar.GridBody>
           {(date) => (
-            <Calendar.Cell date={date}>
+            <RangeCalendar.Cell date={date}>
               <DayContents date={date} rooms={rooms} />
-            </Calendar.Cell>
+            </RangeCalendar.Cell>
           )}
-        </Calendar.GridBody>
-      </Calendar.Grid>
-    </Calendar>
+        </RangeCalendar.GridBody>
+      </RangeCalendar.Grid>
+    </RangeCalendar>
   );
 }

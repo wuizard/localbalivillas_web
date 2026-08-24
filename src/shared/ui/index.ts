@@ -1,3 +1,4 @@
+export { BackButton } from "./BackButton";
 export { Button, ButtonLink, buttonClass } from "./Button";
 export type { ButtonSize, ButtonVariant } from "./Button";
 export { Logo } from "./Logo";
