@@ -27,4 +27,18 @@ export const env = {
   get demoContent(): boolean {
     return process.env.DEMO_CONTENT === "1";
   },
+
+  /**
+   * Whether `POST /booking/submit` really fires. Off unless explicitly switched on, because
+   * there is no staging API — both env files point at production, so the default has to be
+   * the one that cannot create a real, non-refundable reservation by accident. Preview
+   * deployments are production *builds*, so keying this on `NODE_ENV` would arm every one
+   * of them; it is set per-environment instead, on the production environment only.
+   *
+   * `NEXT_PUBLIC_` because the funnel submits from the browser — a server-only variable
+   * reads as `undefined` there, which would silently mean "go live".
+   */
+  get liveBooking(): boolean {
+    return process.env.NEXT_PUBLIC_BOOKING_LIVE === "1";
+  },
 } as const;

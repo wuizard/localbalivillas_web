@@ -37,24 +37,22 @@ export function TopNav() {
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="relative mx-auto flex h-(--top-nav-h) max-w-[1440px] items-center gap-4 px-4 md:px-6 lg:px-8">
-        {/* Left cluster, below lg. The hamburger is hidden on phones — they navigate from
-            the bottom bar (DESIGN.md §4.1) and a second, competing entry point in the
-            top-left is noise. It returns on tablets, which get neither the bottom bar's
-            prominence nor the desktop nav. Calling takes the slot it leaves, which also
-            keeps the right-hand controls narrow enough not to crowd the centred logo. */}
-        <div className="-ml-2 flex shrink-0 items-center lg:hidden">
+        {/* Tablet-only left cluster. Phones carry neither control: they navigate from the
+            bottom bar (DESIGN.md §4.1), and calling is reachable from the WhatsApp button
+            and the footer — a bare left edge keeps the top bar to the logo and the one
+            control that changes what the page says. Tablets get both, having neither the
+            bottom bar's prominence nor the desktop nav. */}
+        <div className="-ml-2 hidden shrink-0 items-center md:flex lg:hidden">
           <button
             type="button"
             aria-label="Open menu"
             aria-expanded={isMenuOpen}
             onClick={() => setMenuOpen(true)}
-            className="text-fg hover:bg-surface-muted hidden size-10 items-center justify-center rounded-full md:flex"
+            className="text-fg hover:bg-surface-muted flex size-10 items-center justify-center rounded-full"
           >
             <Menu size={22} strokeWidth={1.7} aria-hidden />
           </button>
 
-          {/* Booking by phone is the highest-intent action on mobile, so it stays in the
-              chrome; the wishlist it displaces lives in the bottom nav there. */}
           <a
             href={`tel:+${site.whatsapp}`}
             aria-label={`Call us on ${site.phoneDisplay}`}

@@ -301,15 +301,16 @@
     will-change: transform;
   }
 
+  /* Held still while it is being read: hover and keyboard focus on a pointer device, and a
+     finger held on the rail on a touch one — `:active` is the only touch equivalent, and a
+     card that drifts out from under the sentence you are on is the whole complaint. */
   .marquee:hover .marquee-track,
-  .marquee:focus-within .marquee-track {
+  .marquee:focus-within .marquee-track,
+  .marquee:active .marquee-track {
     animation-play-state: paused;
   }
 
-  /* Below md the drift becomes a rail the thumb drives. A 6rem fade at each edge eats half
-     a 375px screen, and a card that slides away on its own is one a guest cannot finish
-     reading — on a phone the wall stops being scenery and has to be legible. */
-  @media (prefers-reduced-motion: reduce), (max-width: 767px) {
+  @media (prefers-reduced-motion: reduce) {
     .marquee-track {
       animation: none;
       width: auto;
@@ -348,10 +349,24 @@
     );
   }
 
+  /* A 6rem fade at each edge eats a third of a 375px screen, so the phone gets a much
+     shorter one — enough to soften the edge, not enough to grey out the card being read. */
   @media (max-width: 767px) {
     .marquee-mask {
-      -webkit-mask-image: none;
-      mask-image: none;
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 1.25rem,
+        #000 calc(100% - 1.25rem),
+        transparent
+      );
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 1.25rem,
+        #000 calc(100% - 1.25rem),
+        transparent
+      );
     }
   }
 }
