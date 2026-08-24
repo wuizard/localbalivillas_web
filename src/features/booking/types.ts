@@ -1,4 +1,5 @@
 import type { Coupon, IsoDate, NightRate } from "@/features/pricing";
+import type { RoomSnapshot } from "@/shared/api";
 
 export type GuestDetails = {
   title: "male" | "female";
@@ -21,6 +22,8 @@ export type BookingDraft = {
   image: string | null;
   roomId: string;
   roomName: string;
+  /** Posted back as `roomDetail`; the endpoint throws without it. */
+  roomSnapshot: RoomSnapshot;
   checkIn: IsoDate;
   checkOut: IsoDate;
   nights: number;

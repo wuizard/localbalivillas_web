@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { PricedRoom } from "@/features/pricing";
-import { apiGet } from "@/shared/api";
+import { apiGet, type RoomSnapshot } from "@/shared/api";
 import { htmlToParagraphs } from "@/shared/lib/html";
 import { toHouseRuleGroups } from "../lib/house-rules";
 import {
@@ -76,12 +76,29 @@ function toRoomOffer(raw: z.infer<typeof roomSchema>): RoomOffer {
     disabledDates: raw.disabledDate ?? [],
   };
 
+  /**
+   * Carried through unmapped, because the booking endpoint stores it verbatim: it wants the
+   * raw `facilities` object, and `propertyImage`/`room` under those names. Images here are
+   * the room's own — the property-photo fallback below is a display convenience and has no
+   * business in the record of what was booked.
+   */
+  const snapshot: RoomSnapshot = {
+    propertyImage: raw.propertyImage ?? [],
+    name: raw.name?.trim() || "Room",
+    room: typeof raw.room === "number" ? raw.room : null,
+    facilities: Object.fromEntries(
+      Object.entries(facilities).map(([key, value]) => [key, value === true]),
+    ),
+    amenities: raw.amenities ?? [],
+  };
+
   return {
     id: raw._id,
     name: raw.name?.trim() || "Room",
     images: (raw.propertyImage ?? []).filter((url) => url.startsWith("http")),
     basePrice,
     pricing,
+    snapshot,
     bedrooms: typeof raw.room === "number" && raw.room > 0 ? raw.room : null,
     maxGuests: raw.maximumGuest?.total ?? raw.maximumGuest?.adult ?? null,
     roomSize: raw.roomSize?.trim() || null,
@@ -108,9 +125,9 @@ export async function getPropertyDetail(key: string): Promise<PropertyDetail | n
   const raw = Array.isArray(payload) ? payload[0] : payload;
   if (!raw || raw.isActive === false) return null;
 
-  const type = ((PROPERTY_TYPES as readonly string[]).includes(raw.type)
-    ? raw.type
-    : "villas") as PropertyType;
+  const type = (
+    (PROPERTY_TYPES as readonly string[]).includes(raw.type) ? raw.type : "villas"
+  ) as PropertyType;
 
   const bedrooms = [
     ...new Set(
@@ -156,8 +173,6 @@ export async function getPropertyDetail(key: string): Promise<PropertyDetail | n
     description: htmlToParagraphs(raw.description),
     rooms,
     houseRuleGroups: toHouseRuleGroups(raw.houseRules),
-    mapEmbedUrl: raw.mapInfo?.startsWith("https://www.google.com/maps/embed")
-      ? raw.mapInfo
-      : null,
+    mapEmbedUrl: raw.mapInfo?.startsWith("https://www.google.com/maps/embed") ? raw.mapInfo : null,
   };
 }

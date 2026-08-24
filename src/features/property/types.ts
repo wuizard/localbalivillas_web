@@ -1,4 +1,5 @@
 import type { PricedRoom } from "@/features/pricing";
+import type { RoomSnapshot } from "@/shared/api";
 
 export const PROPERTY_TYPES = ["villas", "resorts", "hotels", "bamboo_house"] as const;
 
@@ -44,6 +45,8 @@ export type RoomOffer = {
   basePrice: number | null;
   /** Everything `features/pricing` needs to quote a stay. */
   pricing: PricedRoom;
+  /** The raw fields `POST /booking/submit` stores; the display fields below cannot stand in. */
+  snapshot: RoomSnapshot;
   bedrooms: number | null;
   maxGuests: number | null;
   roomSize: string | null;

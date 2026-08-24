@@ -64,11 +64,11 @@ export type SubmitInput = {
  * spread of `form` over `bookingData`), because that is the only description of this
  * endpoint that exists. Three things are worth knowing before changing any of it:
  *
- * - `totalDays` is `days.length`, which is **nights + 1** — `days` runs check-in through
- *   check-out inclusive and nobody sleeps on the night they leave.
+ * - `roomDetail` is required. The controller copies five fields off it onto the reservation
+ *   without checking it exists, so omitting it throws before anything is written.
  * - the occupancy field is `kids`, not `children`.
- * - `value` is the formatted *pre-coupon* subtotal. It is display text in a money payload
- *   and almost certainly ignored, but it is carried for parity rather than guessed at.
+ * - `days` and `priceList` define the stay. `startDate`, `endDate`, `totalDays` and `value`
+ *   are all sent and none are read; they are kept for parity with the legacy caller.
  *
  * The one deliberate deviation: `startDate`/`endDate` go as `YYYY-MM-DD`. Legacy sends
  * `Date` objects, which JSON-serialise to UTC and shift a Bali midnight back to 16:00 the
@@ -87,6 +87,9 @@ function toPayload({ draft, guest, coupon, subtotal, total }: SubmitInput) {
     placeName: draft.propertyName,
     roomId: draft.roomId,
     roomName: draft.roomName,
+    // Required. The controller reads five fields off this with no guard, so an absent
+    // `roomDetail` is a TypeError and no reservation at all.
+    roomDetail: draft.roomSnapshot,
     startDate: draft.checkIn,
     endDate: draft.checkOut,
     days,

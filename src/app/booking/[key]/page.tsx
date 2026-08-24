@@ -42,7 +42,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
     return (
       <div className="container-page flex min-h-[50vh] flex-col items-center justify-center py-16 text-center">
         <h1 className="font-display text-display-sm text-fg">Choose your dates first</h1>
-        <p className="mt-3 max-w-md text-body text-fg-muted">
+        <p className="text-body text-fg-muted mt-3 max-w-md">
           We need your arrival and departure dates before we can show you a total.
         </p>
         <ButtonLink href={property.href} size="lg" className="mt-6">
@@ -64,6 +64,7 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
     image: room.images[0] ?? property.images[0] ?? null,
     roomId: room.id,
     roomName: room.name,
+    roomSnapshot: room.snapshot,
     checkIn,
     checkOut,
     nights: quote.nights,
@@ -83,12 +84,12 @@ export default async function BookingPage({ params, searchParams }: PageProps) {
         </Link>
       </nav>
 
-      <h1 className="mt-3 font-display text-display-lg text-fg">Complete your booking</h1>
+      <h1 className="font-display text-display-lg text-fg mt-3">Complete your booking</h1>
 
       {draft.available ? null : (
         <p
           role="alert"
-          className="mt-5 rounded-md border border-danger/40 bg-danger/10 p-4 text-body text-fg"
+          className="border-danger/40 bg-danger/10 text-body text-fg mt-5 rounded-md border p-4"
         >
           Those dates are no longer available for this room. Pick different dates and we&apos;ll
           re-check.
