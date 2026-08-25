@@ -1,9 +1,16 @@
-import { Ban, Bus, CircleParking, Coffee, UtensilsCrossed, Waves } from "lucide-react";
+import { Ban, CircleParking, Coffee, UtensilsCrossed, Waves } from "lucide-react";
 import { ROOM_FACILITIES, type PropertyDetail, type RoomFacilityKey } from "../types";
 
-const DETAIL: Record<RoomFacilityKey, { icon: typeof Coffee; detail: string }> = {
+/**
+ * A facility only earns a slot here once we can state its terms honestly. Anything missing
+ * from this map is dropped from the section — it still shows on the room cards, where it is
+ * a flag rather than a promise.
+ */
+const DETAIL: Partial<Record<RoomFacilityKey, { icon: typeof Coffee; detail: string }>> = {
   breakfast: { icon: Coffee, detail: "Included with your stay" },
-  airportShuttle: { icon: Bus, detail: "Complimentary airport transfer" },
+  // Pulled from the highlights: the API flag says the property runs a shuttle, not that it
+  // gives one away, and legacy quotes "Extra additional charge for airport shuttle".
+  // airportShuttle: { icon: Bus, detail: "Available at an extra charge" },
   freeParking: { icon: CircleParking, detail: "Complimentary on-site parking" },
   swimmingPool: { icon: Waves, detail: "Your own private pool" },
   publicPool: { icon: Waves, detail: "Full resort pool access" },
@@ -16,17 +23,19 @@ const DETAIL: Record<RoomFacilityKey, { icon: typeof Coffee; detail: string }> =
  * thing a guest most needs to know before they get attached.
  */
 export function PropertyHighlights({ property }: { property: PropertyDetail }) {
-  const offered = ROOM_FACILITIES.map((facility) => facility.key).filter((key) =>
-    property.rooms.some((room) => room.facilities.includes(key)),
+  const offered = ROOM_FACILITIES.filter(
+    (facility) =>
+      DETAIL[facility.key] !== undefined &&
+      property.rooms.some((room) => room.facilities.includes(facility.key)),
   );
 
   const highlights = [
     { key: "policy", label: "No refund & no modify", icon: Ban, detail: "Non-refundable reservation" },
-    ...offered.map((key) => ({
+    ...offered.map(({ key, label }) => ({
       key,
-      label: ROOM_FACILITIES.find((facility) => facility.key === key)?.label ?? key,
-      icon: DETAIL[key].icon,
-      detail: DETAIL[key].detail,
+      label,
+      icon: DETAIL[key]!.icon,
+      detail: DETAIL[key]!.detail,
     })),
   ].slice(0, 5);
 

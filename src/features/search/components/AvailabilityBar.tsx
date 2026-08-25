@@ -141,8 +141,12 @@ export function AvailabilityBar({ roomPricing = [] }: { roomPricing?: PricedRoom
 
       {/* Two readouts, one calendar. Both halves open the same range picker, so a stay is
           picked the way it is thought about — arrival then departure, in two taps, with the
-          nights between them filled in. */}
-      <div ref={stayRef} className="relative md:col-span-2 md:grid md:grid-cols-2 md:items-stretch">
+          nights between them filled in.
+
+          A grid at every width, not only from md up: both halves are `h-full`, which against
+          a plain block parent resolves to the container's full height *each*, so on mobile the
+          pair overflowed by a whole segment and the submit button painted over Check-out. */}
+      <div ref={stayRef} className="relative grid items-stretch md:col-span-2 md:grid-cols-2">
         <button
           type="button"
           ref={stayTriggerRef}

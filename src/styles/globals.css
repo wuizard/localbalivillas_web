@@ -301,11 +301,25 @@
     will-change: transform;
   }
 
-  /* Held still while it is being read: hover and keyboard focus on a pointer device, and a
-     finger held on the rail on a touch one — `:active` is the only touch equivalent, and a
-     card that drifts out from under the sentence you are on is the whole complaint. */
-  .marquee:hover .marquee-track,
-  .marquee:focus-within .marquee-track,
+  /* Held still while it is being read — a card that drifts out from under the sentence you
+     are on is the whole complaint. Three separate rules, not one selector list: an unsupported
+     selector invalidates the entire list it sits in, and each of these has to survive alone.
+
+     Every one of them must also *release*. A phone latches `:hover` onto the last thing
+     tapped and never clears it, so pointer hover is gated to real pointers. */
+  @media (hover: hover) and (pointer: fine) {
+    .marquee:hover .marquee-track {
+      animation-play-state: paused;
+    }
+  }
+
+  /* `:focus-visible`, not `:focus-within`: tapping a review card focuses its link, and
+     `:focus-within` would then park the wall until the guest happened to tap elsewhere. */
+  .marquee:has(:focus-visible) .marquee-track {
+    animation-play-state: paused;
+  }
+
+  /* The touch equivalent — held only while the finger is down, resumed on lift. */
   .marquee:active .marquee-track {
     animation-play-state: paused;
   }
