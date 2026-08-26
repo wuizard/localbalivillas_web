@@ -8,6 +8,7 @@ import {
   ChevronRight,
   CircleParking,
   Coffee,
+  Expand,
   Maximize2,
   Users,
   UtensilsCrossed,
@@ -21,6 +22,7 @@ import { quoteStay } from "@/features/pricing";
 import { useCurrency } from "@/shared/currency";
 import { cn } from "@/shared/lib/cn";
 import { pluralise } from "@/shared/lib/format";
+import { Lightbox } from "@/shared/ui";
 import { ROOM_FACILITIES, type RoomFacilityKey, type RoomOffer } from "../types";
 
 const FACILITY_ICONS: Record<RoomFacilityKey, typeof Coffee> = {
@@ -194,6 +196,8 @@ export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCard
 
 function RoomImages({ room }: { room: RoomOffer }) {
   const railRef = useRef<HTMLUListElement>(null);
+  const [active, setActive] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const thumbnails = room.images.slice(0, 6);
 
   function scrollBy(direction: -1 | 1) {
@@ -206,28 +210,50 @@ function RoomImages({ room }: { room: RoomOffer }) {
 
   return (
     <div className="flex flex-col gap-2 p-4 lg:p-5">
-      <div className="bg-surface-muted relative aspect-[4/3] overflow-hidden rounded-sm">
+      <button
+        type="button"
+        onClick={() => setLightboxIndex(active)}
+        aria-label={`View ${room.name} photos full screen`}
+        className="bg-surface-muted group focus-visible:outline-brand-500 relative block aspect-[4/3] w-full cursor-zoom-in overflow-hidden rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
         <Image
-          src={room.images[0] ?? ""}
-          alt={room.name}
+          src={room.images[active] ?? ""}
+          alt={`${room.name}, photo ${active + 1}`}
           fill
           sizes="(min-width: 1024px) 34vw, 100vw"
-          className="object-cover"
+          className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
-      </div>
+        <span className="glass glass-sm text-fg pointer-events-none absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <Expand size={14} strokeWidth={1.8} aria-hidden />
+        </span>
+      </button>
 
       {thumbnails.length > 1 ? (
         <div className="relative">
           <ul ref={railRef} className="no-scrollbar flex scroll-px-8 gap-2 overflow-x-auto px-8">
             {thumbnails.map((src, index) => (
-              <li key={src} className="relative size-16 shrink-0 overflow-hidden rounded-sm">
-                <Image
-                  src={src}
-                  alt={`${room.name}, photo ${index + 1}`}
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
+              <li key={src} className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActive(index)}
+                  onDoubleClick={() => setLightboxIndex(index)}
+                  aria-label={`Show photo ${index + 1} of ${room.images.length}`}
+                  aria-current={index === active}
+                  className={cn(
+                    "relative block size-16 overflow-hidden rounded-sm transition-opacity",
+                    index === active
+                      ? "ring-brand-500 ring-2 ring-offset-1"
+                      : "opacity-70 hover:opacity-100",
+                  )}
+                >
+                  <Image
+                    src={src}
+                    alt={`${room.name}, photo ${index + 1}`}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                </button>
               </li>
             ))}
           </ul>
@@ -235,6 +261,15 @@ function RoomImages({ room }: { room: RoomOffer }) {
           <RailButton side="left" onPress={() => scrollBy(-1)} />
           <RailButton side="right" onPress={() => scrollBy(1)} />
         </div>
+      ) : null}
+
+      {lightboxIndex !== null ? (
+        <Lightbox
+          images={room.images}
+          label={room.name}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       ) : null}
     </div>
   );
