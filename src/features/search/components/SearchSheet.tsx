@@ -124,6 +124,7 @@ export function SearchSheet({ destinations, initial, className }: SearchSheetPro
     setOpenStep(null);
     router.push(
       searchHref({
+        query: null,
         destination: draft.destination,
         checkIn: draft.checkIn?.toString() ?? null,
         checkOut: draft.checkOut?.toString() ?? null,

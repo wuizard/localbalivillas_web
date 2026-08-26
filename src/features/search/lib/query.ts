@@ -3,6 +3,7 @@ import { DEFAULT_CRITERIA, MAX_BEDROOMS, type SearchCriteria } from "../types";
 /** Search state lives in the URL so results stay shareable and crawlable (CLAUDE.md §4). */
 export function criteriaToSearchParams(criteria: SearchCriteria): URLSearchParams {
   const params = new URLSearchParams();
+  if (criteria.query?.trim()) params.set("q", criteria.query.trim());
   if (criteria.destination) params.set("destination", criteria.destination);
   if (criteria.checkIn) params.set("checkIn", criteria.checkIn);
   // A check-out that is not after the check-in is not a stay; drop it rather than emit
@@ -36,6 +37,7 @@ export function criteriaFromSearchParams(params: URLSearchParams): SearchCriteri
   const checkOut = params.get("checkOut");
 
   return {
+    query: params.get("q")?.trim() || null,
     destination: params.get("destination"),
     checkIn,
     checkOut: checkOut && checkIn && checkOut <= checkIn ? null : checkOut,

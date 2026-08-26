@@ -4,6 +4,8 @@ export type Destination = {
 };
 
 export type SearchCriteria = {
+  /** Free-text villa name, as typed. `null` when the guest is browsing rather than hunting. */
+  query: string | null;
   destination: string | null;
   checkIn: string | null;
   checkOut: string | null;
@@ -14,6 +16,7 @@ export type SearchCriteria = {
 };
 
 export const DEFAULT_CRITERIA: SearchCriteria = {
+  query: null,
   destination: null,
   checkIn: null,
   checkOut: null,

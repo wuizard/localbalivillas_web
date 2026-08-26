@@ -68,6 +68,7 @@ export function SearchBar({ destinations, className }: SearchBarProps) {
   function submit() {
     router.push(
       searchHref({
+        query: null,
         destination,
         checkIn: checkIn?.toString() ?? null,
         checkOut: checkOut?.toString() ?? null,

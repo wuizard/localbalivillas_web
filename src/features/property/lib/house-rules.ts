@@ -1,4 +1,4 @@
-import { htmlToListItems, splitLabelled } from "@/shared/lib/html";
+import { htmlToLabelledLines } from "@/shared/lib/html";
 import type { HouseRuleGroup } from "../types";
 
 /**
@@ -17,7 +17,7 @@ const GROUPS: { id: string; title: string; matches: RegExp }[] = [
   {
     id: "guests",
     title: "Guest requirements",
-    matches: /photo id|passport|travel document|minimum age|guests are required/i,
+    matches: /photo id|passport|travel document|minimum age|age limit|age requirement|guests are required/i,
   },
 ];
 
@@ -34,14 +34,13 @@ function classify(label: string | null, line: string): { id: string; title: stri
 }
 
 export function toHouseRuleGroups(houseRulesHtml: string | null | undefined): HouseRuleGroup[] {
-  const lines = htmlToListItems(houseRulesHtml);
+  const lines = htmlToLabelledLines(houseRulesHtml);
   if (lines.length === 0) return [];
 
   const buckets = new Map<string, HouseRuleGroup>();
 
-  for (const line of lines) {
-    const rule = splitLabelled(line);
-    const group = classify(rule.label, line);
+  for (const rule of lines) {
+    const group = classify(rule.label, `${rule.label ?? ""} ${rule.value}`);
 
     const bucket = buckets.get(group.id) ?? { id: group.id, title: group.title, rules: [] };
     // Rule text is not unique — a property can publish the same line twice — so the render key

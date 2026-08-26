@@ -43,6 +43,43 @@ export function htmlToParagraphs(html: string | null | undefined): string[] {
     .filter((paragraph) => paragraph.length > 0);
 }
 
+const BLOCK = /<(li|p)[^>]*>([\s\S]*?)<\/\1>/gi;
+/** A block whose entire content is bold/underlined is a heading, not a rule. */
+const HEADING_ONLY = /^\s*(?:<(?:strong|b|u|em)[^>]*>\s*)+[^<]*(?:\s*<\/(?:strong|b|u|em)>\s*)+$/i;
+
+export type LabelledLine = { label: string | null; value: string };
+
+/**
+ * Flattens CMS block markup into lines, carrying `<p><strong><u>Check in</u></strong></p>`
+ * style headings down onto the lines beneath them as labels.
+ *
+ * The plain `<li>`-or-paragraphs reader could not see these: a page that mixes headed
+ * paragraphs with one stray `<ul>` matched the list branch, and every headed paragraph —
+ * check-in times, check-out times, age limits — was silently dropped.
+ */
+export function htmlToLabelledLines(html: string | null | undefined): LabelledLine[] {
+  if (!html) return [];
+
+  const lines: LabelledLine[] = [];
+  let heading: string | null = null;
+
+  for (const match of html.matchAll(BLOCK)) {
+    const inner = match[2] ?? "";
+    const text = toText(inner);
+    if (text.length === 0) continue;
+
+    if (match[1]?.toLowerCase() === "p" && HEADING_ONLY.test(inner.trim())) {
+      heading = text.replace(/[:\s]+$/, "");
+      continue;
+    }
+
+    const inline = splitLabelled(text);
+    lines.push(inline.label ? inline : { label: heading, value: text });
+  }
+
+  return lines;
+}
+
 /** Pulls `<li>` contents out as plain strings; falls back to paragraphs when there is no list. */
 export function htmlToListItems(html: string | null | undefined): string[] {
   if (!html) return [];

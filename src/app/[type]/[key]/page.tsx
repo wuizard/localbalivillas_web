@@ -80,9 +80,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: property.name,
       description,
       url: `${env.siteUrl}${property.href}`,
-      images: property.images[0]
-        ? [{ url: property.images[0], alt: `${property.name}, ${property.location}, Bali` }]
-        : undefined,
+      // No `images` here on purpose: an explicit list overrides the file convention, and
+      // `opengraph-image.tsx` beside this file renders a 1200x630 card from our own domain
+      // instead of linking the oversized, mistyped S3 original.
     },
   };
 }

@@ -17,6 +17,15 @@ export const metadata: Metadata = {
     "Book handpicked luxury villas, resorts and private retreats across Bali directly with " +
     "Local Bali Villas. Best rates guaranteed, local experts, 24/7 support.",
   alternates: { canonical: "/" },
+  // Without these the share card inherits the layout's generic tagline as its description and
+  // carries no url at all; the image comes from `app/opengraph-image.tsx`.
+  openGraph: {
+    title: `${site.name} | Luxury Villa Rentals in Bali`,
+    description:
+      "Book handpicked luxury villas, resorts and private retreats across Bali directly. " +
+      "Best rates guaranteed, local experts, 24/7 support.",
+    url: "/",
+  },
 };
 
 /** Editorial picks. If a key disappears from the API the tile falls back to a featured villa. */

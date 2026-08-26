@@ -7,9 +7,16 @@
  * twelve pages use four different heading conventions, and forcing one would have meant guessing
  * which paragraph belonged to which heading.
  */
+/**
+ * `contact` carries a channel rather than a literal: the legacy pages printed the address and
+ * numbers into the copy, so every change meant hunting twelve files, and the migration dropped
+ * the values entirely — leaving "Email" and "Phone" as headings with nothing under them. The
+ * details now come from `site`, which is what the footer already renders.
+ */
 export type AboutBlock =
   | { kind: "heading"; text: string }
-  | { kind: "text"; text: string; indented: boolean };
+  | { kind: "text"; text: string; indented: boolean }
+  | { kind: "contact"; channel: "email" | "phone" | "whatsapp" | "address" | "website" };
 
 export type AboutPage = {
   slug: string;
@@ -66,8 +73,11 @@ export const ABOUT_PAGES: AboutPage[] = [
     blocks: [
       { kind: "text", indented: false, text: "For any legal inquiries or to verify our credentials, please contact us directly. We are happy to provide any additional information you may require." },
       { kind: "heading", text: "Email" },
+      { kind: "contact", channel: "email" },
       { kind: "heading", text: "Phone" },
+      { kind: "contact", channel: "phone" },
       { kind: "heading", text: "Address" },
+      { kind: "contact", channel: "address" },
       { kind: "text", indented: false, text: "Thank you for choosing Local Bali Travel Agent. We look forward to serving you and making your trip to Bali an unforgettable experience." },
     ],
   },
@@ -170,9 +180,13 @@ export const ABOUT_PAGES: AboutPage[] = [
       { kind: "text", indented: true, text: "Our team comprises local experts who have in-depth knowledge of Bali. They can offer valuable insights, recommend the best places to visit, and provide tips to enhance your travel experience. We are committed to making your stay in Bali as enjoyable and memorable as possible." },
       { kind: "heading", text: "How to Reach Us" },
       { kind: "heading", text: "Phone" },
+      { kind: "contact", channel: "phone" },
       { kind: "heading", text: "Email" },
+      { kind: "contact", channel: "email" },
       { kind: "heading", text: "WhatsApp" },
+      { kind: "contact", channel: "whatsapp" },
       { kind: "heading", text: "Live Chat" },
+      { kind: "text", indented: true, text: "Tap the WhatsApp button in the corner of any page and one of our team will answer there." },
       { kind: "heading", text: "Client Satisfaction" },
       { kind: "text", indented: false, text: "Our top priority is your satisfaction and peace of mind. By providing 24/7 support, we aim to offer unparalleled service and ensure that you have a smooth and enjoyable travel experience. Whether its day or night, you can count on Local Bali Travel Agent to be there for you. Thank you for trusting Local Bali Travel Agent. We are committed to making your Bali adventure unforgettable, with support available whenever you need it." },
     ],

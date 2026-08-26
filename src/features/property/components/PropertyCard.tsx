@@ -76,12 +76,17 @@ export function PropertyCard({
               ({property.rating.count} {property.rating.count === 1 ? "review" : "reviews"})
             </span>
           </p>
-        ) : (
+        ) : null}
+
+        {/* Beds and capacity sit alongside the rating rather than instead of it: they answer
+            "does this place fit us", which no star average can, and a card that hid them the
+            moment a rating existed left every rated villa looking like a studio. */}
+        {beds || property.maxGuests ? (
           <ul className="text-fg-muted flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.75rem]">
             {beds ? <Meta icon={BedDouble}>{beds}</Meta> : null}
             {property.maxGuests ? <Meta icon={Users}>{property.maxGuests} Guests</Meta> : null}
           </ul>
-        )}
+        ) : null}
 
         <div className="border-border mt-auto flex items-end justify-between gap-2 border-t pt-2.5">
           <span className="flex min-w-0 flex-col">

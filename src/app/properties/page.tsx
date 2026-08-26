@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import {
   PROPERTY_TYPES,
   PropertyCard,
   getProperties,
   type PropertyType,
 } from "@/features/property";
-import { bedroomSummary, criteriaFromSearchParams } from "@/features/search";
+import { NameSearch, bedroomSummary, criteriaFromSearchParams } from "@/features/search";
 
 export const metadata: Metadata = {
   title: "Villas, resorts and private retreats in Bali",
@@ -41,8 +42,14 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   const type = readType(params.type);
 
   const all = await getProperties();
+  // Name search matches the area too: "Ubud" typed into a box labelled by villa name should
+  // find Ubud villas rather than nothing.
+  const needle = criteria.query?.toLowerCase() ?? null;
   const properties = all.filter(
     (property) =>
+      (needle === null ||
+        property.name.toLowerCase().includes(needle) ||
+        property.location.toLowerCase().includes(needle)) &&
       (type === null || property.type === type) &&
       (criteria.destination === null || property.location === criteria.destination) &&
       // Properties publish every bedroom count they offer, so a 2-bedroom request keeps a
@@ -67,6 +74,10 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
 
   return (
     <div className="container-page py-10 md:py-14">
+      <Suspense fallback={<div className="h-12 rounded-full md:h-14" />}>
+        <NameSearch resultCount={properties.length} className="mb-7 max-w-xl md:mb-9" />
+      </Suspense>
+
       <header className="flex flex-col gap-2">
         <p className="text-label text-brand-600 dark:text-brand-300 uppercase">
           {[criteria.destination ?? "All of Bali", bedroomSummary(criteria.bedrooms)]
@@ -80,7 +91,9 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
 
       {properties.length === 0 ? (
         <p className="text-body text-fg-muted mt-12">
-          Nothing matches that combination yet. Try a different area or clear the filters.
+          {criteria.query
+            ? `No place matches “${criteria.query}”. Check the spelling, or clear the search to see everything.`
+            : "Nothing matches that combination yet. Try a different area or clear the filters."}
         </p>
       ) : (
         <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
