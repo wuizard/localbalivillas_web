@@ -120,7 +120,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
       <RoomOfferList
         property={property}
         availabilitySlot={
-          <Suspense fallback={<Skeleton className="h-[268px] rounded-md md:h-[76px]" />}>
+          <Suspense fallback={<Skeleton className="h-[58px] rounded-md md:h-[64px]" />}>
             <AvailabilityBar roomPricing={property.rooms.map((room) => room.pricing)} />
           </Suspense>
         }

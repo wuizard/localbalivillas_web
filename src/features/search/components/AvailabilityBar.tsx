@@ -2,20 +2,32 @@
 
 import { getLocalTimeZone, parseDate, type CalendarDate } from "@internationalized/date";
 import { format } from "date-fns";
-import { BedDouble, CalendarDays, Search, User } from "lucide-react";
+import { CalendarDays, Search, User } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import type { PricedRoom } from "@/features/pricing";
-import { useDismissable } from "@/shared/hooks/useDismissable";
+import { useEffect, useMemo, useState } from "react";
+import { countNights, stayDays, type PricedRoom } from "@/features/pricing";
 import { cn } from "@/shared/lib/cn";
+import { criteriaFromSearchParams } from "../lib/query";
 import { StayPriceCalendar } from "./StayPriceCalendar";
-import { GuestStepper, MAX_ADULTS, MAX_CHILDREN, guestTotal } from "./GuestPicker";
-import { SearchSegment, SegmentValue } from "./SearchSegment";
+import { GuestStepper, MAX_ADULTS, MAX_CHILDREN } from "./GuestPicker";
 
-const MAX_ROOMS = 10;
+const EDITOR_ID = "availability-editor";
 
-function formatDay(date: CalendarDate | null): string | null {
-  return date ? format(date.toDate(getLocalTimeZone()), "EEE, d MMM") : null;
+function formatDay(date: CalendarDate): string {
+  return format(date.toDate(getLocalTimeZone()), "EEE, d MMM");
+}
+
+/** 375px has room for one of the two, not both: the weekday is what a phone drops first. */
+function formatDayShort(date: CalendarDate): string {
+  return format(date.toDate(getLocalTimeZone()), "d MMM");
+}
+
+function stayLabelWith(
+  formatter: (date: CalendarDate) => string,
+  { checkIn, checkOut }: Stay,
+): string {
+  if (!checkIn) return "Add dates";
+  return checkOut ? `${formatter(checkIn)} – ${formatter(checkOut)}` : formatter(checkIn);
 }
 
 /** A hand-edited or stale `?checkIn=` must not throw the whole strip out of the tree. */
@@ -28,59 +40,92 @@ function readDate(value: string | null): CalendarDate | null {
   }
 }
 
+type Stay = {
+  checkIn: CalendarDate | null;
+  checkOut: CalendarDate | null;
+  adults: number;
+  children: number;
+};
+
 /**
- * The property page's date and occupancy picker. It writes to the URL rather than to local
- * state so a chosen stay survives a refresh and can be shared — the same rule the results
- * page follows (CLAUDE.md §4) — and it reads the URL back on mount so a shared link opens
- * with the dates it was shared with.
+ * The stay the page is currently priced for — read from the URL, never from local state, so
+ * a link arriving from the results page opens already showing the dates and party it was
+ * searched with (CLAUDE.md §4).
+ *
+ * The params are read through the same codec the results page writes, so a stay cannot mean
+ * one thing on the way out of search and another on the way into a property.
+ */
+function readStay(params: URLSearchParams): Stay {
+  const criteria = criteriaFromSearchParams(params);
+
+  return {
+    checkIn: readDate(criteria.checkIn),
+    checkOut: readDate(criteria.checkOut),
+    adults: criteria.adults,
+    children: criteria.children,
+  };
+}
+
+/**
+ * The property page's stay summary: dates and party on one horizontal row, with the editor
+ * folded away until asked for. Room count is deliberately absent — a room is chosen on the
+ * room card that quotes it, so asking for a quantity before the guest has seen the rooms
+ * asks the same question twice and lets the two answers disagree.
  */
 export function AvailabilityBar({ roomPricing = [] }: { roomPricing?: PricedRoom[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
-  const [checkIn, setCheckIn] = useState<CalendarDate | null>(() =>
-    readDate(params.get("checkIn")),
-  );
-  const [checkOut, setCheckOut] = useState<CalendarDate | null>(() => {
-    const start = readDate(params.get("checkIn"));
-    const end = readDate(params.get("checkOut"));
-    return end && start && end.compare(start) <= 0 ? null : end;
-  });
-  const [adults, setAdults] = useState(Number(params.get("adults")) || 2);
-  const [children, setChildren] = useState(Number(params.get("children")) || 0);
-  const [rooms, setRooms] = useState(Number(params.get("rooms")) || 1);
+  const committed = useMemo(() => readStay(new URLSearchParams(params.toString())), [params]);
 
-  const {
-    isOpen: isStayOpen,
-    setOpen: setStayOpen,
-    containerRef: stayRef,
-    triggerRef: stayTriggerRef,
-  } = useDismissable<HTMLDivElement>();
-  const guests = useDismissable<HTMLDivElement>();
-  const roomPicker = useDismissable<HTMLDivElement>();
+  const [isEditing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Stay>(committed);
 
-  const stayRange = checkIn && checkOut ? { start: checkIn, end: checkOut } : null;
+  useEffect(() => {
+    if (!isEditing) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setEditing(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isEditing]);
 
-  function pickStay(range: { start: CalendarDate; end: CalendarDate }) {
-    setCheckIn(range.start);
-    setCheckOut(range.end);
-    setStayOpen(false);
+  const guests = committed.adults + committed.children;
+  const hasStay = committed.checkIn !== null && committed.checkOut !== null;
+  const nights =
+    committed.checkIn && committed.checkOut
+      ? countNights(stayDays(committed.checkIn.toString(), committed.checkOut.toString()))
+      : 0;
+
+  const stayLabel = stayLabelWith(formatDay, committed);
+  const stayLabelShort = stayLabelWith(formatDayShort, committed);
+
+  const draftRange =
+    draft.checkIn && draft.checkOut ? { start: draft.checkIn, end: draft.checkOut } : null;
+
+  function toggleEditor() {
+    // Reopening always starts from what the page is priced for, so an abandoned edit cannot
+    // leave a draft that silently disagrees with the rates on screen.
+    if (!isEditing) setDraft(committed);
+    setEditing(!isEditing);
   }
 
   function submit() {
     const next = new URLSearchParams(params.toString());
-    if (checkIn) next.set("checkIn", checkIn.toString());
+    if (draft.checkIn) next.set("checkIn", draft.checkIn.toString());
     else next.delete("checkIn");
-    if (checkOut && checkIn && checkOut.compare(checkIn) > 0) {
-      next.set("checkOut", checkOut.toString());
+    if (draft.checkOut && draft.checkIn && draft.checkOut.compare(draft.checkIn) > 0) {
+      next.set("checkOut", draft.checkOut.toString());
     } else next.delete("checkOut");
-    next.set("adults", String(adults));
-    if (children > 0) next.set("children", String(children));
+    next.set("adults", String(draft.adults));
+    if (draft.children > 0) next.set("children", String(draft.children));
     else next.delete("children");
-    next.set("rooms", String(rooms));
+    // Room quantity belongs to the room card that quotes it; clear any inherited from a link.
+    next.delete("rooms");
 
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    setEditing(false);
   }
 
   return (
@@ -91,168 +136,116 @@ export function AvailabilityBar({ roomPricing = [] }: { roomPricing?: PricedRoom
         event.preventDefault();
         submit();
       }}
-      className={cn(
-        "bg-surface ring-border/70 rounded-md p-2 shadow-lg ring-1",
-        "grid gap-1 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] md:items-stretch md:gap-0",
-      )}
+      className="bg-surface ring-border/70 rounded-md shadow-lg ring-1"
     >
-      <Popover
-        control={roomPicker}
-        icon={BedDouble}
-        label="Rooms"
-        value={`${rooms} ${rooms === 1 ? "Room" : "Rooms"}`}
-        className="border-border max-md:border-t md:border-l"
-      >
-        <GuestStepper
-          label="Rooms"
-          hint="How many you need"
-          value={rooms}
-          min={1}
-          max={MAX_ROOMS}
-          onChange={setRooms}
-        />
-      </Popover>
-
-      <Popover
-        control={guests}
-        icon={User}
-        label="Guests"
-        value={guestTotal(adults, children)}
-        className="border-border max-md:border-t md:border-l"
-      >
-        <GuestStepper
-          label="Adults"
-          hint="Ages 13 or above"
-          value={adults}
-          min={1}
-          max={MAX_ADULTS}
-          onChange={setAdults}
-        />
-        <div className="bg-border h-px" />
-        <GuestStepper
-          label="Children"
-          hint="Ages 0 to 12"
-          value={children}
-          min={0}
-          max={MAX_CHILDREN}
-          onChange={setChildren}
-        />
-      </Popover>
-
-      {/* Two readouts, one calendar. Both halves open the same range picker, so a stay is
-          picked the way it is thought about — arrival then departure, in two taps, with the
-          nights between them filled in.
-
-          A grid at every width, not only from md up: both halves are `h-full`, which against
-          a plain block parent resolves to the container's full height *each*, so on mobile the
-          pair overflowed by a whole segment and the submit button painted over Check-out. */}
-      <div ref={stayRef} className="relative grid items-stretch md:col-span-2 md:grid-cols-2">
+      <div className="flex items-center gap-2 px-3 py-2.5 md:px-5 md:py-3">
         <button
           type="button"
-          ref={stayTriggerRef}
-          aria-label={`Stay dates, ${formatDay(checkIn) ?? "not chosen"}${
-            checkOut ? ` to ${formatDay(checkOut)}` : ""
-          }`}
-          aria-expanded={isStayOpen}
-          aria-haspopup="dialog"
-          onClick={() => setStayOpen(!isStayOpen)}
-          className="hover:bg-surface-muted/70 h-full w-full rounded-sm text-left"
-        >
-          <SearchSegment icon={CalendarDays} label="Check-in">
-            <SegmentValue value={formatDay(checkIn)} placeholder="Add dates" />
-          </SearchSegment>
-        </button>
-
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-hidden
-          onClick={() => setStayOpen(!isStayOpen)}
-          className="border-border hover:bg-surface-muted/70 h-full w-full rounded-sm border-t text-left md:border-t-0 md:border-l"
-        >
-          <SearchSegment icon={CalendarDays} label="Check-out">
-            <SegmentValue value={formatDay(checkOut)} placeholder="Add dates" />
-          </SearchSegment>
-        </button>
-
-        {isStayOpen ? (
-          <div
-            role="dialog"
-            aria-label="Stay dates"
-            className="border-border bg-surface absolute top-[calc(100%+12px)] left-0 z-30 w-[22rem] max-w-[calc(100vw-2rem)] rounded-md border p-5 shadow-lg"
-          >
-            <StayPriceCalendar rooms={roomPricing} value={stayRange} onChange={pickStay} />
-          </div>
-        ) : null}
-      </div>
-
-      <button
-        type="submit"
-        className={cn(
-          "bg-brand-500 flex h-12 items-center justify-center gap-2 rounded-sm px-6",
-          "text-label font-semibold tracking-[0.08em] text-white uppercase shadow-sm",
-          "transition-[background-color,transform] duration-[120ms] ease-out",
-          "hover:bg-brand-600 active:scale-[0.98]",
-          "focus-visible:outline-brand-500 focus-visible:outline-2 focus-visible:outline-offset-2",
-          "max-md:mt-1 md:my-auto md:ml-3 md:h-11",
-        )}
-      >
-        <Search size={15} strokeWidth={2.4} aria-hidden className="md:hidden" />
-        Check availability
-      </button>
-    </form>
-  );
-}
-
-function Popover({
-  control,
-  icon,
-  label,
-  value,
-  className,
-  panelClassName,
-  children,
-}: {
-  control: ReturnType<typeof useDismissable<HTMLDivElement>>;
-  icon: typeof User;
-  label: string;
-  value: string | null;
-  className?: string;
-  panelClassName?: string;
-  children: React.ReactNode;
-}) {
-  const { isOpen, setOpen, containerRef, triggerRef } = control;
-  const placeholder = `Add ${label.toLowerCase()}`;
-
-  return (
-    <div className={cn("relative", className)}>
-      <button
-        type="button"
-        ref={triggerRef}
-        aria-label={`${label}, ${value ?? placeholder}`}
-        aria-expanded={isOpen}
-        aria-haspopup="dialog"
-        onClick={() => setOpen(!isOpen)}
-        className="hover:bg-surface-muted/70 h-full w-full rounded-sm text-left"
-      >
-        <SearchSegment icon={icon} label={label}>
-          <SegmentValue value={value} placeholder={placeholder} />
-        </SearchSegment>
-      </button>
-
-      {isOpen ? (
-        <div
-          ref={containerRef}
-          role="dialog"
-          aria-label={label}
+          onClick={toggleEditor}
+          aria-expanded={isEditing}
+          aria-controls={isEditing ? EDITOR_ID : undefined}
+          aria-label={`Stay dates, ${
+            hasStay ? stayLabel : "not chosen"
+          }. ${guests} ${guests === 1 ? "guest" : "guests"}. Edit`}
           className={cn(
-            "border-border bg-surface absolute top-[calc(100%+12px)] right-0 z-30 w-80 max-w-[calc(100vw-2rem)] rounded-md border p-5 shadow-lg",
-            panelClassName,
+            "hover:bg-surface-muted/60 -mx-1.5 flex min-w-0 flex-1 items-center gap-2.5",
+            "rounded-sm px-1.5 py-1 text-left transition-colors duration-[120ms] ease-out",
+            "focus-visible:outline-brand-500 focus-visible:outline-2 focus-visible:outline-offset-2",
           )}
         >
-          {children}
+          <CalendarDays
+            size={18}
+            strokeWidth={1.7}
+            aria-hidden
+            className="text-brand-500 shrink-0"
+          />
+          <span
+            className={cn(
+              "text-body min-w-0 truncate font-semibold",
+              hasStay ? "text-fg" : "text-fg-subtle",
+            )}
+          >
+            <span className="sm:hidden">{stayLabelShort}</span>
+            <span className="max-sm:hidden">{stayLabel}</span>
+          </span>
+
+          {nights > 0 ? (
+            <span className="text-body-sm text-fg-muted hidden shrink-0 md:inline">
+              · {nights} {nights === 1 ? "night" : "nights"}
+            </span>
+          ) : null}
+
+          <span className="border-border flex shrink-0 items-center gap-1.5 border-l pl-2.5">
+            <User size={17} strokeWidth={1.7} aria-hidden className="text-brand-500" />
+            <span className="tabular text-body text-fg font-semibold">{guests}</span>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleEditor}
+          aria-expanded={isEditing}
+          aria-controls={isEditing ? EDITOR_ID : undefined}
+          className={cn(
+            "text-body-sm text-brand-600 dark:text-brand-300 shrink-0 rounded-sm px-1 py-1 font-semibold",
+            "focus-visible:outline-brand-500 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2",
+          )}
+        >
+          {isEditing ? "Close" : hasStay ? "Change search" : "Select dates"}
+        </button>
+      </div>
+
+      {/* Mounted on open, not merely hidden: a prerendered calendar spends the page's first
+          bytes on a month nobody asked for, and react-aria's own day labels do not survive
+          hydration identically when the server and the browser disagree on locale data. */}
+      {isEditing ? (
+        <div id={EDITOR_ID} className="border-border border-t p-4 md:p-5">
+          <div className="grid gap-5 md:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] md:gap-8">
+            <StayPriceCalendar
+              rooms={roomPricing}
+              value={draftRange}
+              onChange={(range) =>
+                setDraft((current) => ({ ...current, checkIn: range.start, checkOut: range.end }))
+              }
+            />
+
+            <div className="flex flex-col">
+              <GuestStepper
+                label="Adults"
+                hint="Ages 13 or above"
+                value={draft.adults}
+                min={1}
+                max={MAX_ADULTS}
+                onChange={(adults) => setDraft((current) => ({ ...current, adults }))}
+              />
+              <div className="bg-border h-px" />
+              <GuestStepper
+                label="Children"
+                hint="Ages 0 to 12"
+                value={draft.children}
+                min={0}
+                max={MAX_CHILDREN}
+                onChange={(children) => setDraft((current) => ({ ...current, children }))}
+              />
+
+              <button
+                type="submit"
+                className={cn(
+                  "bg-brand-500 mt-5 flex h-11 items-center justify-center gap-2 rounded-sm px-6",
+                  "text-label font-semibold tracking-[0.08em] text-white uppercase shadow-sm",
+                  "transition-[background-color,transform] duration-[120ms] ease-out",
+                  "hover:bg-brand-600 active:scale-[0.98]",
+                  "focus-visible:outline-brand-500 focus-visible:outline-2 focus-visible:outline-offset-2",
+                  "md:mt-auto md:self-start",
+                )}
+              >
+                <Search size={15} strokeWidth={2.4} aria-hidden />
+                Check availability
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
-    </div>
+    </form>
   );
 }
