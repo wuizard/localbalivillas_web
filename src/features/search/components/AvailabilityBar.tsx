@@ -136,9 +136,15 @@ export function AvailabilityBar({ roomPricing = [] }: { roomPricing?: PricedRoom
         event.preventDefault();
         submit();
       }}
-      className="bg-surface ring-border/70 rounded-md shadow-lg ring-1"
+      className={cn(
+        "bg-surface ring-border/70 rounded-md shadow-lg ring-1",
+        // Full width is right on a phone and wrong on a desktop: stretched to a 1200px
+        // container the row becomes a thin rule with a stay at one end and its own edit
+        // link marooned at the other. From md up the card is sized by what it says.
+        "md:w-fit",
+      )}
     >
-      <div className="flex items-center gap-2 px-3 py-2.5 md:px-5 md:py-3">
+      <div className="flex items-center gap-2 px-3 py-2.5 md:gap-4 md:px-5 md:py-3">
         <button
           type="button"
           onClick={toggleEditor}
@@ -200,7 +206,9 @@ export function AvailabilityBar({ roomPricing = [] }: { roomPricing?: PricedRoom
           hydration identically when the server and the browser disagree on locale data. */}
       {isEditing ? (
         <div id={EDITOR_ID} className="border-border border-t p-4 md:p-5">
-          <div className="grid gap-5 md:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] md:gap-8">
+          {/* Fixed columns, not fractions: the card is content-sized from md up, so a `1fr`
+            guest column would size itself from the steppers and leave the calendar cramped. */}
+          <div className="grid gap-5 md:grid-cols-[22rem_18rem] md:gap-8">
             <StayPriceCalendar
               rooms={roomPricing}
               value={draftRange}
