@@ -197,7 +197,7 @@ export function Lightbox({ images, label, startIndex, onClose }: LightboxProps) 
       role="dialog"
       aria-modal="true"
       aria-label={`${label} photos`}
-      className="fixed inset-0 z-[80] flex flex-col bg-black/95"
+      className="fixed inset-0 z-[80] flex flex-col bg-black"
     >
       <header
         className="flex items-center justify-between gap-2 px-4 py-3"

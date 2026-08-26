@@ -17,7 +17,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { quoteStay } from "@/features/pricing";
 import { useCurrency } from "@/shared/currency";
 import { cn } from "@/shared/lib/cn";
@@ -40,6 +40,14 @@ const FACILITY_LABEL = new Map(ROOM_FACILITIES.map((f) => [f.key, f.label] as co
 const NON_REFUNDABLE = "No refund or modification";
 
 const MAX_ROOMS = 10;
+
+/** One 64px thumbnail plus the 8px gap, so an arrow press lands on a thumbnail edge. */
+const THUMB_STEP = 72;
+const THUMB_SCROLL_MS = 420;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 type RoomOfferCardProps = {
   room: RoomOffer;
@@ -200,8 +208,36 @@ function RoomImages({ room }: { room: RoomOffer }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const thumbnails = room.images.slice(0, 6);
 
-  function scrollBy(direction: -1 | 1) {
-    railRef.current?.scrollBy({ left: direction * 96, behavior: "smooth" });
+  const animation = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (animation.current) cancelAnimationFrame(animation.current);
+    },
+    [],
+  );
+
+  function scrollStep(direction: -1 | 1) {
+    const rail = railRef.current;
+    if (!rail) return;
+    if (animation.current) cancelAnimationFrame(animation.current);
+
+    const from = rail.scrollLeft;
+    const to = clamp(from + direction * THUMB_STEP, 0, rail.scrollWidth - rail.clientWidth);
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      rail.scrollLeft = to;
+      return;
+    }
+
+    const start = performance.now();
+    const frame = (now: number): void => {
+      const t = Math.min((now - start) / THUMB_SCROLL_MS, 1);
+      const eased = t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+      rail.scrollLeft = from + (to - from) * eased;
+      if (t < 1) animation.current = requestAnimationFrame(frame);
+    };
+    animation.current = requestAnimationFrame(frame);
   }
 
   if (room.images.length === 0) {
@@ -230,7 +266,12 @@ function RoomImages({ room }: { room: RoomOffer }) {
 
       {thumbnails.length > 1 ? (
         <div className="relative">
-          <ul ref={railRef} className="no-scrollbar flex scroll-px-8 gap-2 overflow-x-auto px-8">
+          {/* py-1 gives the selected thumbnail's ring room; the rail's overflow clips anything
+              drawn outside the content box. */}
+          <ul
+            ref={railRef}
+            className="no-scrollbar flex scroll-px-8 gap-2 overflow-x-auto px-8 py-1"
+          >
             {thumbnails.map((src, index) => (
               <li key={src} className="shrink-0">
                 <button
@@ -242,7 +283,7 @@ function RoomImages({ room }: { room: RoomOffer }) {
                   className={cn(
                     "relative block size-16 overflow-hidden rounded-sm transition-opacity",
                     index === active
-                      ? "ring-brand-500 ring-2 ring-offset-1"
+                      ? "ring-brand-500 ring-offset-surface ring-2 ring-offset-2"
                       : "opacity-70 hover:opacity-100",
                   )}
                 >
@@ -258,8 +299,8 @@ function RoomImages({ room }: { room: RoomOffer }) {
             ))}
           </ul>
 
-          <RailButton side="left" onPress={() => scrollBy(-1)} />
-          <RailButton side="right" onPress={() => scrollBy(1)} />
+          <RailButton side="left" onPress={() => scrollStep(-1)} />
+          <RailButton side="right" onPress={() => scrollStep(1)} />
         </div>
       ) : null}
 
