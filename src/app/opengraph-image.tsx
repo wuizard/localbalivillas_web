@@ -68,5 +68,12 @@ export default async function Image() {
     .jpeg({ quality: 82, mozjpeg: true })
     .toBuffer();
 
-  return new Response(new Uint8Array(jpeg), { headers: { "Content-Type": contentType } });
+  return new Response(new Uint8Array(jpeg), {
+    headers: {
+      "Content-Type": contentType,
+      // Fingerprinted URL, so it can be cached at the edge forever — a scrape that has to wait
+      // for a render is a scrape that times out into a bare link.
+      "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+    },
+  });
 }

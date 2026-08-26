@@ -20,7 +20,13 @@ async function asJpeg(image: ImageResponse): Promise<Response> {
   return new Response(new Uint8Array(jpeg), {
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=0, must-revalidate",
+      /**
+       * Cached hard at the edge, deliberately. Next fingerprints this URL with a content hash,
+       * so a changed card is a changed URL and there is nothing to revalidate. `must-revalidate`
+       * here made every scrape a MISS that spent 1.6-2.7s rendering — long enough for WhatsApp's
+       * crawler to give up, which shows the guest a bare link.
+       */
+      "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
     },
   });
 }
