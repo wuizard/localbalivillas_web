@@ -5,7 +5,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { cn } from "@/shared/lib/cn";
 
-const DEBOUNCE_MS = 300;
+// Each commit is a server render, and unhurried thumb-typing on a phone leaves 300–400ms
+// between keystrokes — at 300ms that is a navigation per character, which reads as no
+// debounce at all.
+const DEBOUNCE_MS = 500;
 
 type NameSearchProps = {
   /** How many places the current params matched, for the live count beside the field. */
@@ -25,36 +28,53 @@ export function NameSearch({ resultCount, className }: NameSearchProps) {
 
   const committed = params.get("q") ?? "";
   const [value, setValue] = useState(committed);
-  const [lastCommitted, setLastCommitted] = useState(committed);
+  const [seenInUrl, setSeenInUrl] = useState(committed);
+  /** The last term this field put in the URL, so it can recognise its own echo. */
+  const [sent, setSent] = useState(committed);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // A back/forward step, or a cleared filter elsewhere, changes the URL under us; the field
   // follows the URL rather than holding onto what was typed before the navigation. Adjusted
   // during render rather than in an effect, which would paint the stale value first.
-  if (lastCommitted !== committed) {
-    setLastCommitted(committed);
-    setValue(committed);
+  //
+  // It must not follow the echo of its own commit: that arrives a server round trip after the
+  // keystroke that caused it, and adopting it would discard every character typed in between.
+  if (seenInUrl !== committed) {
+    setSeenInUrl(committed);
+    if (committed !== sent) {
+      setSent(committed);
+      setValue(committed);
+    }
   }
 
   function commit(next: string) {
-    const params2 = new URLSearchParams(params.toString());
-    if (next.trim()) params2.set("q", next.trim());
-    else params2.delete("q");
+    const term = next.trim();
+    if (term === sent) return;
+    setSent(term);
 
-    const query = params2.toString();
+    // Read the live URL, not this render's snapshot: a debounced commit fires up to
+    // DEBOUNCE_MS after the render that scheduled it, by which time another filter may have
+    // moved, and a stale snapshot would silently revert it.
+    const next2 = new URLSearchParams(window.location.search);
+    if (term) next2.set("q", term);
+    else next2.delete("q");
+
+    const query = next2.toString();
     startTransition(() =>
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }),
     );
   }
 
+  // Committing is what `sent` records, so a commit from anywhere — this timer, Enter, the
+  // clear button — re-runs this effect and cancels whatever else was still pending.
   useEffect(() => {
-    if (value === committed) return;
+    if (value.trim() === sent) return;
     const timer = setTimeout(() => commit(value), DEBOUNCE_MS);
     return () => clearTimeout(timer);
-    // `commit` closes over the params it should read at fire time; re-created each render.
+    // `commit` closes over the router it should read at fire time; re-created each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, committed]);
+  }, [value, sent]);
 
   return (
     <form
@@ -119,12 +139,16 @@ export function NameSearch({ resultCount, className }: NameSearchProps) {
         ) : null}
 
         {/* The count is the whole feedback loop for a debounced field — without it a search
-            that matches nothing looks identical to one that has not run yet. */}
+            that matches nothing looks identical to one that has not run yet. Phones need it
+            most and have the least room, so the noun drops out and only the number stays. */}
         <span
           aria-live="polite"
-          className="text-body-sm text-fg-muted border-border hidden shrink-0 border-l pl-3 sm:block"
+          className="text-body-sm text-fg-muted border-border shrink-0 border-l pl-3"
         >
-          {resultCount} {resultCount === 1 ? "place" : "places"}
+          {resultCount}
+          <span className="sr-only sm:not-sr-only sm:ml-1">
+            {resultCount === 1 ? "place" : "places"}
+          </span>
         </span>
       </div>
     </form>
