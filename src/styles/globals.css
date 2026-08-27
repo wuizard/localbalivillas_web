@@ -119,6 +119,11 @@
 
   --radius: 10px;
   --field-radius: var(--radius-sm);
+
+  /* What the sticky top bar actually occupies: its own height plus the status-bar inset it
+     pads for in standalone mode. Anything that sticks *below* the header offsets by this,
+     never by `--top-nav-h` alone, or it hides under the notch on an installed iPhone. */
+  --top-nav-offset: calc(var(--top-nav-h) + env(safe-area-inset-top, 0px));
 }
 
 /* HeroUI strikes through every disabled day. In a stay calendar most disabled days are
@@ -167,7 +172,7 @@
      * navigations opened with the page already nudged under the header. It also keeps `#main`
      * and any in-page anchor from landing underneath the bar.
      */
-    scroll-padding-top: calc(var(--top-nav-h) + env(safe-area-inset-top, 0px) + 1px);
+    scroll-padding-top: calc(var(--top-nav-offset) + 1px);
   }
 
   body {

@@ -73,12 +73,20 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
   const stayQuery = stay.toString();
 
   return (
-    <div className="container-page py-10 md:py-14">
-      <Suspense fallback={<div className="h-12 rounded-full md:h-14" />}>
-        <NameSearch resultCount={properties.length} className="mb-7 max-w-xl md:mb-9" />
-      </Suspense>
+    <div className="pb-10 md:pb-14">
+      {/* The field is the only control on this page and the list runs long, so it sticks:
+          refining a search from card sixty should not cost a scroll back to the top. Its own
+          band rather than a sticky child of the container, so the surface spans the full
+          width and cards pass under it instead of beside it. */}
+      <div className="border-border/70 bg-bg sticky top-(--top-nav-offset) z-30 border-b">
+        <div className="container-page py-2.5 md:py-4">
+          <Suspense fallback={<div className="h-12 max-w-xl rounded-full md:h-14" />}>
+            <NameSearch resultCount={properties.length} className="max-w-xl" />
+          </Suspense>
+        </div>
+      </div>
 
-      <header className="flex flex-col gap-2">
+      <header className="container-page flex flex-col gap-2 pt-8 md:pt-10">
         <p className="text-label text-brand-600 dark:text-brand-300 uppercase">
           {[criteria.destination ?? "All of Bali", bedroomSummary(criteria.bedrooms)]
             .filter(Boolean)
@@ -90,13 +98,13 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
       </header>
 
       {properties.length === 0 ? (
-        <p className="text-body text-fg-muted mt-12">
+        <p className="text-body text-fg-muted container-page mt-12">
           {criteria.query
             ? `No place matches “${criteria.query}”. Check the spelling, or clear the search to see everything.`
             : "Nothing matches that combination yet. Try a different area or clear the filters."}
         </p>
       ) : (
-        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ul className="container-page mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((property, index) => (
             <li key={property.id}>
               <PropertyCard
