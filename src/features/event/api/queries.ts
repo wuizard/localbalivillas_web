@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { apiGet } from "@/shared/api";
+import { apiGet, isNotFound } from "@/shared/api";
 import { htmlToParagraphs } from "@/shared/lib/html";
 import type { EventPackageDetail, EventPackageSummary } from "../types";
 
@@ -45,12 +45,18 @@ function toSummary(raw: RawPackage): EventPackageSummary {
   };
 }
 
+/** Empty on a 404 — the endpoint is not live in every environment. See `isNotFound`. */
 export async function getEventPackages(): Promise<EventPackageSummary[]> {
-  const raw = await apiGet("/event-packages", z.array(packageSchema), {
-    revalidate: EVENTS_REVALIDATE_SECONDS,
-    tags: ["event-packages"],
-  });
-  return raw.map(toSummary);
+  try {
+    const raw = await apiGet("/event-packages", z.array(packageSchema), {
+      revalidate: EVENTS_REVALIDATE_SECONDS,
+      tags: ["event-packages"],
+    });
+    return raw.map(toSummary);
+  } catch (error) {
+    if (isNotFound(error)) return [];
+    throw error;
+  }
 }
 
 /** Returns null on a 404 so the route can render notFound() rather than a 500. */

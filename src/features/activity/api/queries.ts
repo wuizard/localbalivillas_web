@@ -1,4 +1,4 @@
-import { apiGet } from "@/shared/api";
+import { apiGet, isNotFound } from "@/shared/api";
 import type { ActivityCategory, ActivityDetail, ActivitySummary } from "../types";
 import { activityDetailSchema, activityListSchema, toActivityDetail, toActivitySummary } from "./schemas";
 
@@ -12,20 +12,26 @@ export type ActivityFilters = {
 
 /**
  * `GET /activities/list`. Drafts are excluded by the API, not here — a filter the
- * client applies is a filter a client can forget.
+ * client applies is a filter a client can forget. Empty on a 404: the endpoint is not
+ * live in every environment. See `isNotFound`.
  */
 export async function getActivities(filters: ActivityFilters = {}): Promise<ActivitySummary[]> {
-  const raw = await apiGet("/activities/list", activityListSchema, {
-    revalidate: ACTIVITIES_REVALIDATE_SECONDS,
-    tags: ["activities"],
-    query: {
-      category: filters.category ?? undefined,
-      region: filters.region ?? undefined,
-      search: filters.search ?? undefined,
-    },
-  });
+  try {
+    const raw = await apiGet("/activities/list", activityListSchema, {
+      revalidate: ACTIVITIES_REVALIDATE_SECONDS,
+      tags: ["activities"],
+      query: {
+        category: filters.category ?? undefined,
+        region: filters.region ?? undefined,
+        search: filters.search ?? undefined,
+      },
+    });
 
-  return raw.map(toActivitySummary);
+    return raw.map(toActivitySummary);
+  } catch (error) {
+    if (isNotFound(error)) return [];
+    throw error;
+  }
 }
 
 /** `GET /activity/:key`. Returns null on a 404 so the route can render notFound(). */
