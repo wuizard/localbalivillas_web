@@ -17,6 +17,21 @@ export const env = {
   },
 
   /**
+   * Is this deployment the real storefront?
+   *
+   * Anything else — a staging host, a preview deploy, a laptop — must not be indexed.
+   * A crawlable copy of these pages competes with production for the same terms and
+   * can outrank it, which is the opposite of why this rebuild exists. Keyed on the
+   * site URL rather than NODE_ENV because staging and previews are production
+   * *builds*; NODE_ENV would call every one of them production.
+   */
+  get isPublicSite(): boolean {
+    return /^https:\/\/(www\.)?localbalivillas\.com$/.test(
+      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "",
+    );
+  },
+
+  /**
    * Placeholder reviews and card ratings, for surfaces the API cannot fill yet. Opt-in, and
    * one switch for both so a deployment can never show invented ratings beside a review wall
    * that is empty — or the reverse.
@@ -29,11 +44,16 @@ export const env = {
   },
 
   /**
-   * Whether `POST /booking/submit` really fires. Off unless explicitly switched on, because
-   * there is no staging API — both env files point at production, so the default has to be
-   * the one that cannot create a real, non-refundable reservation by accident. Preview
-   * deployments are production *builds*, so keying this on `NODE_ENV` would arm every one
-   * of them; it is set per-environment instead, on the production environment only.
+   * Whether `POST /booking/submit` really fires. Off unless explicitly switched on.
+   *
+   * A staging API now exists at `lbv-staging-api.wuebuild.com`, so the funnel can finally
+   * be exercised end to end without touching real money — but the default stays off, because
+   * the flag is not what decides whether a booking is real. `NEXT_PUBLIC_API_BASE_URL` is.
+   * Arm this against an environment still pointed at the production API and it creates a
+   * real, non-refundable reservation. Turn it on only where you have checked both.
+   *
+   * Preview deployments are production *builds*, so keying it on `NODE_ENV` would arm every
+   * one of them; it is set per-environment instead.
    *
    * `NEXT_PUBLIC_` because the funnel submits from the browser — a server-only variable
    * reads as `undefined` there, which would silently mean "go live".

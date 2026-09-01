@@ -3,6 +3,8 @@ export { isSoldOut, lowestRateOn, rateCalendar } from "./inventory";
 export { applyCoupon, couponDiscount } from "./coupon";
 export { countNights, occupiedNights, stayDays, weekdayOf } from "./nights";
 export { nightlyBreakdown, resolveNightlyRate, subtotalOf } from "./rates";
+export { matchDateRule } from "./rules";
+export type { DateRule } from "./rules";
 export { lowestNightlyRate, quoteStay } from "./quote";
 export type { QuoteInput, StayQuote } from "./quote";
 export type {

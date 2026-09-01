@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { site } from "@/shared/config/site";
 
-export const alt = `${site.name} — luxury villa rentals in Bali`;
+export const alt = `${site.name}: luxury villa rentals in Bali`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/jpeg";
 
@@ -50,7 +50,7 @@ export default async function Image() {
           across Bali
         </div>
         <div style={{ marginTop: 26, fontSize: 32, color: "rgba(255,255,255,0.72)" }}>
-          Book direct — Seminyak, Canggu, Ubud, Uluwatu and beyond
+          Book direct in Seminyak, Canggu, Ubud, Uluwatu and beyond
         </div>
       </div>
 

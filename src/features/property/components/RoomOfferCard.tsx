@@ -89,10 +89,10 @@ export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCard
             <Spec
               icon={BedDouble}
               value={
-                room.bedrooms ? `${room.bedrooms} Bedroom${room.bedrooms > 1 ? "s" : ""}` : "—"
+                room.bedrooms ? `${room.bedrooms} Bedroom${room.bedrooms > 1 ? "s" : ""}` : "-"
               }
             />
-            <Spec icon={Maximize2} value={room.roomSize ?? "—"} />
+            <Spec icon={Maximize2} value={room.roomSize ?? "-"} />
             <Spec icon={Waves} value={room.poolSize ? `Pool ${room.poolSize}` : "Resort access"} />
           </ul>
 

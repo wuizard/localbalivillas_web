@@ -43,7 +43,12 @@ export const metadata: Metadata = {
     locale: "en_GB",
   },
   twitter: { card: "summary_large_image" },
-  robots: { index: true, follow: true },
+  // robots.txt stops the crawl; this stops the indexing. Google can list a URL it was
+  // never allowed to fetch if something links to it, and only a meta tag on the page
+  // itself prevents that — so a staging host carries both.
+  robots: env.isPublicSite
+    ? { index: true, follow: true }
+    : { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

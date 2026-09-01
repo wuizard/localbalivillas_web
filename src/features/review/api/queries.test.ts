@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiGet = vi.fn();
 vi.mock("@/shared/api", () => ({ apiGet: (...args: unknown[]) => apiGet(...args) }));
@@ -35,6 +35,21 @@ const isDemo = (id: string) => id.startsWith("demo-");
 describe("getReviewsWithFallback", () => {
   beforeEach(() => {
     apiGet.mockReset();
+    // The fallback is opt-in. Every case below is about what it does once it is switched on.
+    vi.stubEnv("DEMO_CONTENT", "1");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("shows nothing but real reviews unless the demo flag is set", async () => {
+    vi.stubEnv("DEMO_CONTENT", "");
+    respondWith(0);
+
+    // The guard is what keeps invented reviews off the public storefront, so a deployment
+    // that forgets the flag must render an empty wall rather than a plausible one.
+    await expect(getReviewsWithFallback(SOURCES)).resolves.toEqual([]);
   });
 
   it("fills the wall entirely with demo cards when the API has nothing", async () => {
@@ -52,11 +67,7 @@ describe("getReviewsWithFallback", () => {
     const reviews = await getReviewsWithFallback(SOURCES);
 
     expect(reviews).toHaveLength(MAX_WALL_REVIEWS);
-    expect(reviews.slice(0, 3).map((review) => review.id)).toEqual([
-      "real-2",
-      "real-1",
-      "real-0",
-    ]);
+    expect(reviews.slice(0, 3).map((review) => review.id)).toEqual(["real-2", "real-1", "real-0"]);
     expect(reviews.slice(3).every((review) => isDemo(review.id))).toBe(true);
   });
 

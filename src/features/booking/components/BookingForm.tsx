@@ -60,7 +60,7 @@ export function BookingForm({ draft }: { draft: BookingDraft }) {
       else window.location.assign(result.paymentLink);
     } catch {
       setSubmitError(
-        "We couldn't complete your booking. Nothing has been charged — please try again, or message us on WhatsApp.",
+        "We couldn't complete your booking. Nothing has been charged. Please try again, or message us on WhatsApp.",
       );
     }
   }
@@ -136,7 +136,7 @@ export function BookingForm({ draft }: { draft: BookingDraft }) {
 
             <Field
               label="Special requests"
-              hint="Optional — we'll pass these to the villa"
+              hint="Optional. We'll pass these to the villa"
               error={errors.specialRequest?.message}
               className="sm:col-span-2"
             >
