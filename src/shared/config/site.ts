@@ -43,21 +43,6 @@ export const propertyTypes = [
   { label: "Bamboo Houses", value: "bamboo_house", href: "/properties?type=bamboo_house" },
 ] as const;
 
-/**
- * Activity categories, in nav order. `TopNav` is handed the subset that actually has
- * published activities behind it — a menu offering "Wellness" that lands on an empty
- * list is worse than the plain link it replaced.
- */
-export const activityCategories = [
-  { label: "Tours", value: "tour", href: "/activities?category=tour" },
-  { label: "Transfers", value: "transfer", href: "/activities?category=transfer" },
-  { label: "On the water", value: "water", href: "/activities?category=water" },
-  { label: "Culture", value: "culture", href: "/activities?category=culture" },
-  { label: "Adventure", value: "adventure", href: "/activities?category=adventure" },
-  { label: "Wellness", value: "wellness", href: "/activities?category=wellness" },
-  { label: "Classes", value: "class", href: "/activities?category=class" },
-] as const;
-
 export type NavMenuItem = { label: string; value: string; href: string };
 
 export type NavItem = {
@@ -75,7 +60,9 @@ export type NavItem = {
  */
 export const primaryNav: readonly NavItem[] = [
   { label: "Villas", href: "/properties", menu: propertyTypes },
-  { label: "Activities", href: "/activities", menu: activityCategories },
+  // Activity categories are managed in the CMS, so this menu is filled at request
+  // time by `AppShell` rather than listed here. An empty menu renders a plain link.
+  { label: "Activities", href: "/activities", menu: [] },
   { label: "Events", href: "/events" },
   { label: "About Us", href: "/about-us/who-are-we" },
   { label: "Contact", href: "/about-us/contact-us" },

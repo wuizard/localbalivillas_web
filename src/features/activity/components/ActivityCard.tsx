@@ -2,12 +2,26 @@ import { Clock, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Price } from "@/shared/ui";
-import { ACTIVITY_CATEGORY_LABEL, type ActivitySummary } from "../types";
+import { humaniseCategory, type ActivitySummary } from "../types";
 import { formatDuration, priceSuffix } from "../lib/format";
 
-export function ActivityCard({ activity, priority }: { activity: ActivitySummary; priority?: boolean }) {
+/**
+ * `categoryLabel` is passed down by the page, which has the list from the API. Without
+ * it the slug is humanised, so a card rendered somewhere that has not fetched the
+ * taxonomy still reads properly rather than showing a raw slug.
+ */
+export function ActivityCard({
+  activity,
+  priority,
+  categoryLabel,
+}: {
+  activity: ActivitySummary;
+  priority?: boolean;
+  categoryLabel?: string;
+}) {
   const duration = formatDuration(activity.durationMinutes);
   const cover = activity.images[0] ?? null;
+  const label = categoryLabel ?? (activity.category ? humaniseCategory(activity.category) : null);
 
   return (
     <li className="border-border bg-surface flex flex-col overflow-hidden rounded-md border shadow-sm">
@@ -23,9 +37,11 @@ export function ActivityCard({ activity, priority }: { activity: ActivitySummary
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
           ) : null}
-          <span className="bg-surface/90 text-label text-fg absolute top-3 left-3 rounded-sm px-2 py-1 uppercase backdrop-blur-sm">
-            {ACTIVITY_CATEGORY_LABEL[activity.category]}
-          </span>
+          {label ? (
+            <span className="bg-surface/90 text-label text-fg absolute top-3 left-3 rounded-sm px-2 py-1 uppercase backdrop-blur-sm">
+              {label}
+            </span>
+          ) : null}
         </div>
 
         <div className="flex flex-1 flex-col gap-2 p-4">
@@ -38,7 +54,7 @@ export function ActivityCard({ activity, priority }: { activity: ActivitySummary
           <div className="text-body-sm text-fg-subtle mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-2">
             <span className="flex items-center gap-1.5">
               <MapPin size={14} strokeWidth={1.8} aria-hidden />
-              {activity.region}
+              {activity.location || activity.region}
             </span>
             {duration ? (
               <span className="flex items-center gap-1.5">

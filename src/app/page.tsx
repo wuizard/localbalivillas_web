@@ -4,6 +4,7 @@ import {
   HomeHero,
   LocationsSection,
   TrustStrip,
+  getActivityMosaic,
   type CategoryTile,
 } from "@/features/content";
 import { FeaturedShelf, getFeaturedProperties, getPropertiesByKey } from "@/features/property";
@@ -74,7 +75,11 @@ export default async function HomePage() {
 
   const tiles: CategoryTile[] = [
     { key: "villas", image: imageFor(CATEGORY_KEYS[0], 1), nightImage: nightFor("villas") },
-    { key: "activities", image: imageFor(CATEGORY_KEYS[1], 2) },
+    {
+      key: "activities",
+      image: imageFor(CATEGORY_KEYS[1], 2),
+      mosaic: getActivityMosaic(),
+    },
     { key: "events", image: imageFor(CATEGORY_KEYS[2], 3), nightImage: nightFor("events") },
   ];
 

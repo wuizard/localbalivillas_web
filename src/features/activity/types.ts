@@ -6,27 +6,37 @@ export type ActivityRule = DateRule & {
   childPrice: number;
 };
 
-export const ACTIVITY_CATEGORIES = [
-  "tour",
-  "transfer",
-  "wellness",
-  "water",
-  "culture",
-  "adventure",
-  "class",
-] as const;
+/**
+ * The slug an activity is filed under. It used to be a fixed union here, which meant
+ * a category added in the CMS could not appear on the site until someone shipped a
+ * matching line of TypeScript. The taxonomy is managed in the CMS now, so this is an
+ * open string and the display names come from `getCategories()`.
+ */
+export type ActivityCategory = string;
 
-export type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
-
-export const ACTIVITY_CATEGORY_LABEL: Record<ActivityCategory, string> = {
-  tour: "Tours",
-  transfer: "Transfers",
-  wellness: "Wellness",
-  water: "On the water",
-  culture: "Culture",
-  adventure: "Adventure",
-  class: "Classes",
+/** A category as the API describes it. `slug` is what an activity stores. */
+export type ActivityCategoryInfo = {
+  slug: string;
+  name: string;
+  description: string | null;
+  /** Published activities in this category, per the API. */
+  activityCount: number;
 };
+
+/**
+ * Last-resort display name, for the odd place that has a slug but no list to look it
+ * up in. Slugs are generated from the name, so this reads correctly for almost all of
+ * them - "culinary-experience" comes back as "Culinary Experience". Punctuation is the
+ * exception ("tour-activities" loses its ampersand), which is why anything rendering a
+ * set of categories takes its labels from the API instead.
+ */
+export function humaniseCategory(slug: string): string {
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
 
 /**
  * Base rates only. Date and weekday overrides live in their own collection on the
@@ -48,7 +58,10 @@ export type ActivitySummary = {
   name: string;
   summary: string;
   category: ActivityCategory;
+  /** Bali or Lombok. */
   region: string;
+  /** The area within the region - Ubud, Canggu, Nusa Dua. Empty when unset. */
+  location: string;
   images: string[];
   durationMinutes: number | null;
   pricing: ActivityPricing;

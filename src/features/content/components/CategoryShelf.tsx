@@ -1,11 +1,15 @@
 import { ArrowRight, CalendarHeart, Home, Palmtree } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/shared/lib/cn";
 import { TimeAwareImage } from "@/shared/ui/TimeAwareImage";
+import { CategoryMosaic } from "./CategoryMosaic";
 
 export type CategoryTile = {
   key: "villas" | "activities" | "events";
   image: string | null;
   nightImage?: string | null;
+  /** Four photographs shown as a 2×2 grid instead of the single frame. */
+  mosaic?: readonly string[] | null;
 };
 
 const CATEGORIES = {
@@ -40,9 +44,10 @@ export function CategoryShelf({ tiles }: { tiles: CategoryTile[] }) {
         className="flex snap-x snap-mandatory gap-3 overflow-x-auto no-scrollbar px-4 scroll-px-4 pb-2
                    md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0"
       >
-        {tiles.map(({ key, image, nightImage }) => {
+        {tiles.map(({ key, image, nightImage, mosaic }) => {
           const category = CATEGORIES[key];
           const Icon = category.icon;
+          const grid = mosaic && mosaic.length >= 4 ? mosaic : null;
 
           return (
             <li key={key} className="w-[64vw] shrink-0 snap-start sm:w-[46vw] md:w-auto">
@@ -50,7 +55,9 @@ export function CategoryShelf({ tiles }: { tiles: CategoryTile[] }) {
                 href={category.href}
                 className="group relative flex aspect-[4/3] flex-col items-center justify-end overflow-hidden rounded-md text-center md:aspect-square"
               >
-                {image ? (
+                {grid ? (
+                  <CategoryMosaic images={grid} />
+                ) : image ? (
                   <TimeAwareImage
                     day={image}
                     night={nightImage}
@@ -62,9 +69,16 @@ export function CategoryShelf({ tiles }: { tiles: CategoryTile[] }) {
                   <span aria-hidden className="absolute inset-0 bg-brand-200" />
                 )}
 
+                {/* Four subjects behind one caption need a heavier scrim than one does —
+                    a mosaic offers no quiet corner for the title to sit in. */}
                 <span
                   aria-hidden
-                  className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10"
+                  className={cn(
+                    "absolute inset-0 bg-gradient-to-t",
+                    grid
+                      ? "from-black/85 via-black/55 to-black/35"
+                      : "from-black/80 via-black/35 to-black/10",
+                  )}
                 />
 
                 <span className="relative flex w-full flex-col items-center gap-3 px-6 pb-5">

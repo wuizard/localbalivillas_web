@@ -5,8 +5,11 @@ import { activityDetailSchema, activityListSchema, toActivityDetail, toActivityS
 const ACTIVITIES_REVALIDATE_SECONDS = 300;
 
 export type ActivityFilters = {
-  category?: ActivityCategory | null;
+  /** One slug, or several - the API takes them comma separated. */
+  category?: ActivityCategory | ActivityCategory[] | null;
   region?: string | null;
+  /** The area, matched by the API against the activity's `location`. */
+  location?: string | null;
   search?: string | null;
 };
 
@@ -21,8 +24,11 @@ export async function getActivities(filters: ActivityFilters = {}): Promise<Acti
       revalidate: ACTIVITIES_REVALIDATE_SECONDS,
       tags: ["activities"],
       query: {
-        category: filters.category ?? undefined,
+        category: Array.isArray(filters.category)
+          ? filters.category.join(",") || undefined
+          : (filters.category ?? undefined),
         region: filters.region ?? undefined,
+        location: filters.location ?? undefined,
         search: filters.search ?? undefined,
       },
     });
@@ -53,5 +59,16 @@ export async function getActivityDetail(key: string): Promise<ActivityDetail | n
  * worse than not offering it.
  */
 export function categoriesWithActivities(activities: ActivitySummary[]): ActivityCategory[] {
-  return [...new Set(activities.map((activity) => activity.category))];
+  return [...new Set(activities.map((activity) => activity.category))].filter(Boolean);
+}
+
+/**
+ * Areas that actually have something in them, alphabetical. Same reasoning as
+ * `categoriesWithActivities`: an offered filter that leads nowhere is worse than no
+ * filter at all.
+ */
+export function locationsWithActivities(activities: ActivitySummary[]): string[] {
+  return [...new Set(activities.map((activity) => activity.location).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b),
+  );
 }

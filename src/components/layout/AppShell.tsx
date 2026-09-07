@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { categoriesWithActivities, getActivities } from "@/features/activity";
-import { activityCategories } from "@/shared/config/site";
+import { categoriesWithActivities, getActivities, getCategories } from "@/features/activity";
 import { StandaloneBackButton } from "@/shared/pwa/StandaloneBackButton";
 import { BottomNav } from "./BottomNav";
 import { Footer } from "./Footer";
@@ -8,15 +7,24 @@ import { TopNav } from "./TopNav";
 import { WhatsAppFab } from "./WhatsAppFab";
 
 /**
- * Only offer a category the catalogue can actually fill. The list is cached for 300s,
- * so this is a cache hit on all but one request in five minutes; on a miss or an API
- * failure it returns empty and Activities falls back to a plain link, which is exactly
- * how it behaved before the dropdown existed.
+ * The dropdown is the CMS taxonomy, narrowed to the categories the catalogue can
+ * actually fill: one offering "Wellness" that lands on an empty list is worse than the
+ * plain link it replaced. Both lists are cached - categories for an hour, activities
+ * for 300s - so this is a cache hit on all but the first request in the window. On a
+ * failure it returns empty and Activities falls back to a plain link.
  */
 async function availableActivityCategories() {
   try {
-    const present = new Set(categoriesWithActivities(await getActivities()));
-    return activityCategories.filter((category) => present.has(category.value));
+    const [categories, activities] = await Promise.all([getCategories(), getActivities()]);
+    const present = new Set(categoriesWithActivities(activities));
+
+    return categories
+      .filter((category) => present.has(category.slug))
+      .map((category) => ({
+        label: category.name,
+        value: category.slug,
+        href: `/activities?category=${category.slug}`,
+      }));
   } catch {
     return [];
   }

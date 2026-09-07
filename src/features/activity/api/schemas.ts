@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { htmlToParagraphs } from "@/shared/lib/html";
-import {
-  ACTIVITY_CATEGORIES,
-  type ActivityCategory,
-  type ActivityDetail,
-  type ActivitySummary,
-} from "../types";
+import type { ActivityCategory, ActivityDetail, ActivitySummary } from "../types";
 
 /** The API hands back raw Mongo documents; map them here so `__v` never reaches a component. */
 const pricingSchema = z
@@ -58,10 +53,13 @@ export const activityDetailSchema = activitySchema;
 
 type RawActivity = z.infer<typeof activitySchema>;
 
+/**
+ * The slug as stored, with no validation against a known set - the set lives in the
+ * CMS now. An activity with no category yields "", which is how the badge knows to
+ * render nothing rather than a made-up default.
+ */
 function toCategory(value: string | null | undefined): ActivityCategory {
-  return (ACTIVITY_CATEGORIES as readonly string[]).includes(value ?? "")
-    ? (value as ActivityCategory)
-    : "tour";
+  return (value ?? "").trim();
 }
 
 /** A zero rate is "not published", not "free" — `Price` renders null as "on request". */
@@ -86,7 +84,8 @@ export function toActivitySummary(raw: RawActivity): ActivitySummary {
     name: raw.name.trim(),
     summary: raw.summary?.trim() ?? "",
     category: toCategory(raw.category),
-    region: raw.region?.trim() || raw.location?.trim() || "Bali",
+    region: raw.region?.trim() || "Bali",
+    location: raw.location?.trim() ?? "",
     images: (raw.activityImage ?? []).filter((url) => url.startsWith("http")),
     durationMinutes: count(raw.durationMinutes),
     pricing: {

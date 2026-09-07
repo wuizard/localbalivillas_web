@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import {
-  ACTIVITY_CATEGORY_LABEL,
   ActivityAbout,
   ActivityBookingBar,
   ActivityGallery,
   ActivityHeader,
   ActivityLogistics,
   InclusionList,
+  categoryLabel,
   getActivities,
   getActivityAvailability,
   getActivityDetail,
+  getCategoryLabels,
 } from "@/features/activity";
 import { EnquiryForm } from "@/features/enquiry";
 import { env } from "@/shared/config/env";
@@ -65,6 +66,10 @@ export default async function ActivityPage({ params }: PageProps) {
   const activity = await getActivityDetail(key);
   if (!activity) notFound();
 
+  // Names come from the CMS taxonomy; the slug is humanised if it is not in the list.
+  const labels = await getCategoryLabels().catch(() => ({}));
+  const categoryName = activity.category ? categoryLabel(labels, activity.category) : null;
+
   // A dead availability endpoint costs the calendar, not the page.
   const availability = await getActivityAvailability(key, isoToday(), isoIn(WINDOW_DAYS)).catch(
     () => null,
@@ -99,13 +104,18 @@ export default async function ActivityPage({ params }: PageProps) {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Activities", item: `${env.siteUrl}/activities` },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: ACTIVITY_CATEGORY_LABEL[activity.category],
-        item: `${env.siteUrl}/activities?category=${activity.category}`,
-      },
-      { "@type": "ListItem", position: 3, name: activity.name },
+      // The category rung is dropped rather than faked when the activity has none.
+      ...(categoryName
+        ? [
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: categoryName,
+              item: `${env.siteUrl}/activities?category=${activity.category}`,
+            },
+          ]
+        : []),
+      { "@type": "ListItem", position: categoryName ? 3 : 2, name: activity.name },
     ],
   };
 
@@ -120,7 +130,7 @@ export default async function ActivityPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
 
-      <ActivityHeader activity={activity} />
+      <ActivityHeader activity={activity} categoryLabel={categoryName ?? undefined} />
       <ActivityGallery images={activity.images} name={activity.name} />
       <ActivityAbout activity={activity} />
 
