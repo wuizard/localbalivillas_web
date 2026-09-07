@@ -22,8 +22,6 @@ type Props = {
 type Next = {
   categories?: string[];
   location?: string | null;
-  /** Force the flat list even with nothing selected. */
-  viewAll?: boolean;
 };
 
 /**
@@ -58,11 +56,6 @@ export function ActivityFilterBar({
     if (nextCategories.length) params.set("category", nextCategories.join(","));
     if (location) params.set("location", location);
     if (search) params.set("q", search);
-    // Without a filter left, `view=all` is what keeps the flat list flat instead of
-    // bouncing back to the category shelves mid-browse.
-    if (!nextCategories.length && !location && !search && next.viewAll !== false) {
-      params.set("view", "all");
-    }
 
     const query = params.toString();
     return query ? `/activities?${query}` : "/activities";
