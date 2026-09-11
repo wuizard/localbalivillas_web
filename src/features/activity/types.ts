@@ -77,6 +77,12 @@ export type ActivityDetail = ActivitySummary & {
   highlights: string[];
   inclusions: string[];
   exclusions: string[];
+  /**
+   * Whether the CMS wants the "What's included" section on the page at all. An
+   * activity with both lists empty hides it regardless; this is the switch for the
+   * ones that have lines written but should not show them.
+   */
+  showInclusions: boolean;
   whatToBring: string[];
   meetingPoint: string | null;
   mapInfo: string | null;

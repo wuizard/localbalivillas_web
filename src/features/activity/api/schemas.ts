@@ -42,6 +42,8 @@ const activitySchema = z.object({
   mapInfo: z.string().nullish(),
   inclusions: stringList,
   exclusions: stringList,
+  /** Absent on activities saved before the CMS switch existed, which means shown. */
+  showInclusions: z.boolean().nullish(),
   whatToBring: stringList,
   cancellationPolicy: z.string().nullish(),
   disabledDate: stringList,
@@ -106,6 +108,7 @@ export function toActivityDetail(raw: RawActivity): ActivityDetail {
     highlights: list(raw.highlights),
     inclusions: list(raw.inclusions),
     exclusions: list(raw.exclusions),
+    showInclusions: raw.showInclusions !== false,
     whatToBring: list(raw.whatToBring),
     meetingPoint: raw.meetingPoint?.trim() || null,
     mapInfo: raw.mapInfo?.trim() || null,

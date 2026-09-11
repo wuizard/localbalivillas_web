@@ -36,6 +36,9 @@ export function ActivityAbout({ activity }: { activity: ActivityDetail }) {
  * footnote under the inclusions.
  */
 export function InclusionList({ activity }: { activity: ActivityDetail }) {
+  // Switched off in the CMS, or there is nothing in either column - a heading over
+  // an empty grid reads as a page that failed to load.
+  if (!activity.showInclusions) return null;
   if (activity.inclusions.length === 0 && activity.exclusions.length === 0) return null;
 
   return (
