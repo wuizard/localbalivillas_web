@@ -1,8 +1,8 @@
 "use client";
 
-import { Calendar } from "@heroui/react";
+import { Calendar, useLocale } from "@heroui/react";
 import type { CalendarDate, DateValue } from "@internationalized/date";
-import { getLocalTimeZone, parseDate, today } from "@internationalized/date";
+import { getLocalTimeZone, parseDate, startOfMonth, today } from "@internationalized/date";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrency } from "@/shared/currency";
 import { cn } from "@/shared/lib/cn";
@@ -54,6 +54,44 @@ function DayContents({
   );
 }
 
+/**
+ * One month. Extracted so the second month is the same grid at an offset rather than a
+ * second copy of the cell rendering, which would be free to drift away from the first.
+ */
+function MonthGrid({
+  byDate,
+  stayDays,
+  offset,
+}: {
+  byDate: Map<string, ActivityDay>;
+  stayDays?: Set<string> | null;
+  offset?: { months: number };
+}) {
+  return (
+    <Calendar.Grid offset={offset}>
+      <Calendar.GridHeader>
+        {(day) => (
+          <Calendar.HeaderCell className="text-label text-fg-muted uppercase">
+            {day}
+          </Calendar.HeaderCell>
+        )}
+      </Calendar.GridHeader>
+
+      <Calendar.GridBody>
+        {(date) => (
+          <Calendar.Cell
+            date={date}
+            // `group` so the price inside can react to the cell's own data-selected.
+            className={cn("group", stayDays?.has(iso(date)) && "ring-brand-400 rounded-sm ring-1")}
+          >
+            <DayContents date={date} byDate={byDate} inStay={stayDays?.has(iso(date)) ?? false} />
+          </Calendar.Cell>
+        )}
+      </Calendar.GridBody>
+    </Calendar.Grid>
+  );
+}
+
 export function ActivityPriceCalendar({
   days,
   byDate,
@@ -62,6 +100,7 @@ export function ActivityPriceCalendar({
   stayDays,
   onSelect,
   onFocusedChange,
+  months = 1,
 }: {
   days: ActivityDay[];
   byDate: Map<string, ActivityDay>;
@@ -70,8 +109,12 @@ export function ActivityPriceCalendar({
   stayDays?: Set<string> | null;
   onSelect: (date: string) => void;
   onFocusedChange?: (date: string) => void;
+  /** Months painted side by side. The caller decides from the viewport, because
+   *  `visibleDuration` is a prop and no Tailwind variant can reach it. */
+  months?: 1 | 2;
 }) {
   const now = today(getLocalTimeZone());
+  const { locale } = useLocale();
 
   // Availability is only loaded for a window. Bounding the calendar to it stops the
   // guest paging into months where every day would render as unavailable for no
@@ -80,6 +123,14 @@ export function ActivityPriceCalendar({
   const last = days[days.length - 1]?.date;
   const minValue = first && parseDate(first).compare(now) > 0 ? parseDate(first) : now;
   const maxValue = last ? parseDate(last) : undefined;
+
+  // Calendar.Heading is react-aria's, and it names only the first visible month - with
+  // two on screen that leaves the right-hand one unlabelled. So the pair is labelled
+  // here instead, from the same focused date the grids align themselves to.
+  const anchor = startOfMonth(focused ? parseDate(focused) : (selected ? parseDate(selected) : minValue));
+  const monthFormat = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" });
+  const monthLabel = (offset: number) =>
+    monthFormat.format(anchor.add({ months: offset }).toDate(getLocalTimeZone()));
 
   return (
     <Calendar
@@ -94,45 +145,65 @@ export function ActivityPriceCalendar({
         if (date) onSelect(iso(date));
       }}
       isDateUnavailable={(date) => !byDate.get(iso(date))?.available}
+      visibleDuration={{ months }}
+      // Page by one month, not by the whole visible pair. The default pages by
+      // `visibleDuration`, which disables the arrow whenever the next *two* months
+      // would leave the loaded window - so with a 60-day window the tail of it
+      // (November, here) could not be reached at all. Advancing a month at a time also
+      // keeps a month on screen across a page, so the eye has something to hold on to.
+      pageBehavior="single"
     >
-      <Calendar.Header className="mb-2 flex items-center justify-between gap-2">
-        <Calendar.NavButton slot="previous" aria-label="Previous month">
+      {/* With two months the arrows are pinned to the outer edges instead of sitting in
+          the flow, so each month's name can centre over its own grid rather than being
+          pushed inward by the width of a button. With one month the header keeps its
+          original shape - react-aria's heading takes the free space and reads left, so
+          an absolute arrow would sit underneath it. */}
+      <Calendar.Header
+        className={cn(
+          "mb-2 flex items-center gap-2",
+          months === 2 ? "relative justify-center" : "justify-between",
+        )}
+      >
+        <Calendar.NavButton
+          slot="previous"
+          aria-label="Previous month"
+          className={cn(months === 2 && "absolute left-0")}
+        >
           <ChevronLeft size={18} aria-hidden />
         </Calendar.NavButton>
-        <Calendar.Heading className="font-display text-title text-fg" />
-        <Calendar.NavButton slot="next" aria-label="Next month">
+
+        {months === 2 ? (
+          <div className="grid w-full grid-cols-2 gap-6">
+            {[0, 1].map((offset) => (
+              <span key={offset} className="font-display text-title text-fg text-center">
+                {monthLabel(offset)}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <Calendar.Heading className="font-display text-title text-fg" />
+        )}
+
+        <Calendar.NavButton
+          slot="next"
+          aria-label="Next month"
+          className={cn(months === 2 && "absolute right-0")}
+        >
           <ChevronRight size={18} aria-hidden />
         </Calendar.NavButton>
       </Calendar.Header>
 
-      <Calendar.Grid>
-        <Calendar.GridHeader>
-          {(day) => (
-            <Calendar.HeaderCell className="text-label text-fg-muted uppercase">
-              {day}
-            </Calendar.HeaderCell>
-          )}
-        </Calendar.GridHeader>
-
-        <Calendar.GridBody>
-          {(date) => (
-            <Calendar.Cell
-              date={date}
-              // `group` so the price inside can react to the cell's own data-selected.
-              className={cn(
-                "group",
-                stayDays?.has(iso(date)) && "ring-brand-400 rounded-sm ring-1",
-              )}
-            >
-              <DayContents
-                date={date}
-                byDate={byDate}
-                inStay={stayDays?.has(iso(date)) ?? false}
-              />
-            </Calendar.Cell>
-          )}
-        </Calendar.GridBody>
-      </Calendar.Grid>
+      {/* `items-start` is load-bearing. Stretched to a shared height, a 5-week month
+          grows its rows to match a 6-week one - and since a day cell is square, that
+          extra height comes back as extra width and the month overflows into its
+          neighbour. Let each size to its own weeks instead; uneven bottoms are normal
+          for a two-month calendar. */}
+      <div className={cn(months === 2 && "grid grid-cols-2 items-start gap-6")}>
+        <MonthGrid byDate={byDate} stayDays={stayDays} />
+        {months === 2 ? (
+          <MonthGrid byDate={byDate} stayDays={stayDays} offset={{ months: 1 }} />
+        ) : null}
+      </div>
     </Calendar>
   );
 }

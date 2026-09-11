@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Money } from "@/shared/currency";
+import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 import type { ActivityDay } from "../api/availability";
 import { stayDates, type StayWindow } from "../api/stay";
 import { ActivityPriceCalendar } from "./ActivityPriceCalendar";
@@ -78,6 +79,11 @@ export function ActivityBookingBar({
   const partyFull = maxPax !== null && adults + children >= maxPax;
   const perGroup = activity.pricing.basis === "per_group";
 
+  // Two months need roughly 45rem beside a 20rem summary, which only clears the card's
+  // inner width once the page container is at its 1280px cap. Below that the second
+  // month would squeeze both, so one month it is.
+  const twoMonths = useMediaQuery("(min-width: 1280px)");
+
   return (
     <section
       id="dates"
@@ -90,15 +96,18 @@ export function ActivityBookingBar({
 
       {/* Fixed columns, not fractions — the same reason AvailabilityBar gives: a day
           cell is `aspect-ratio: 1/1` at full column width, so a `1fr` column on a wide
-          screen makes every cell as tall as it is wide and the month becomes enormous. */}
-      <div className="mt-5 grid gap-6 lg:grid-cols-[22rem_20rem] lg:items-start lg:gap-8">
-        <div className="w-full max-w-[22rem]">
+          screen makes every cell as tall as it is wide and the month becomes enormous.
+          The calendar column is widened rather than stretched at xl: it holds a second
+          month there, which is what the 60-day window was always being loaded for. */}
+      <div className="mt-5 grid gap-6 lg:grid-cols-[22rem_20rem] lg:items-start lg:gap-8 xl:grid-cols-[45rem_20rem]">
+        <div className="w-full max-w-[22rem] xl:max-w-[45rem]">
           <ActivityPriceCalendar
             days={days}
             byDate={byDate}
             selected={selected}
             focused={focused}
             stayDays={stayDays}
+            months={twoMonths ? 2 : 1}
             onSelect={(date) => setParam({ date })}
             onFocusedChange={setFocused}
           />
