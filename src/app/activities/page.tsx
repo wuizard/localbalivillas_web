@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   ActivityCard,
   ActivityFilterBar,
@@ -8,7 +9,10 @@ import {
   getActivities,
   getCategories,
   locationsWithActivities,
+  type ActivitySummary,
 } from "@/features/activity";
+import { env } from "@/shared/config/env";
+import { ActivityGridSkeleton, Skeleton } from "@/shared/ui";
 
 export const revalidate = 300;
 
@@ -45,14 +49,6 @@ export default async function ActivitiesPage({ searchParams }: PageProps) {
 
   const hasFilters = selectedCategories.length > 0 || Boolean(selectedLocation) || Boolean(search);
 
-  const activities = hasFilters
-    ? await getActivities({
-        category: selectedCategories.length ? selectedCategories : null,
-        location: selectedLocation,
-        search: search || null,
-      })
-    : all;
-
   // A category is only offered when something sits behind it - an empty filtered page
   // is worse than no filter. Order follows the CMS.
   const present = new Set(categoriesWithActivities(all));
@@ -61,18 +57,48 @@ export default async function ActivitiesPage({ searchParams }: PageProps) {
     .map((item) => ({ value: item.slug, label: item.name }));
   const labels = Object.fromEntries(categories.map((item) => [item.slug, item.name]));
 
-  const description = [
-    search ? `matching “${search}”` : null,
-    selectedCategories.length
-      ? `in ${selectedCategories.map((slug) => labels[slug] ?? slug).join(" or ")}`
-      : null,
-    selectedLocation ? `around ${selectedLocation}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  /**
+   * The unfiltered catalogue only. A filtered permutation is the same items in a shorter
+   * list, and emitting one ItemList per query string asks Google to index every
+   * combination of pills as a separate page.
+   */
+  const itemList = hasFilters
+    ? null
+    : {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Things to do in Bali",
+        numberOfItems: all.length,
+        itemListElement: all.map((activity, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: activity.name,
+          url: `${env.siteUrl}${activity.href}`,
+        })),
+      };
+
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: env.siteUrl },
+      { "@type": "ListItem", position: 2, name: "Activities" },
+    ],
+  };
 
   return (
     <div className="container-page flex flex-col gap-8 py-8 md:py-14">
+      {itemList ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
+        />
+      ) : null}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+      />
+
       <header className="max-w-2xl">
         <p className="text-label text-brand-600 dark:text-brand-300 uppercase">Activities</p>
         <h1 className="font-display text-display-lg text-fg mt-2">Things to do in Bali</h1>
@@ -105,30 +131,93 @@ export default async function ActivitiesPage({ searchParams }: PageProps) {
             ) : null}
           </div>
 
-          {activities.length === 0 ? (
-            <NoMatches />
-          ) : (
-            <section className="flex flex-col gap-4">
-              <p className="text-body-sm text-fg-muted">
-                {hasFilters
-                  ? `${activities.length} of ${all.length} ${all.length === 1 ? "activity" : "activities"} ${description}`
-                  : `All ${activities.length} ${activities.length === 1 ? "activity" : "activities"}`}
-              </p>
-
-              <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {activities.map((activity, index) => (
-                  <ActivityCard
-                    key={activity.id}
-                    activity={activity}
-                    priority={index < 3}
-                    categoryLabel={labels[activity.category]}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
+          {/* `loading.tsx` covers arriving at this route, but Next does not re-run it when
+              only the search params change - and every filter here is a search param. The
+              key remounts this boundary per query so a pill click shows the skeleton
+              instead of leaving the old grid sitting there unchanged. */}
+          <Suspense
+            key={`${selectedCategories.join(",")}|${selectedLocation ?? ""}|${search}`}
+            fallback={<ResultsFallback />}
+          >
+            <Results
+              all={all}
+              labels={labels}
+              selectedCategories={selectedCategories}
+              selectedLocation={selectedLocation}
+              search={search}
+              hasFilters={hasFilters}
+            />
+          </Suspense>
         </>
       )}
+    </div>
+  );
+}
+
+async function Results({
+  all,
+  labels,
+  selectedCategories,
+  selectedLocation,
+  search,
+  hasFilters,
+}: {
+  all: ActivitySummary[];
+  labels: Record<string, string>;
+  selectedCategories: string[];
+  selectedLocation: string | null;
+  search: string;
+  hasFilters: boolean;
+}) {
+  // The unfiltered catalogue is already in hand from the shell - only a narrowed list
+  // costs another round trip.
+  const activities = hasFilters
+    ? await getActivities({
+        category: selectedCategories.length ? selectedCategories : null,
+        location: selectedLocation,
+        search: search || null,
+      })
+    : all;
+
+  if (activities.length === 0) return <NoMatches />;
+
+  const description = [
+    search ? `matching “${search}”` : null,
+    selectedCategories.length
+      ? `in ${selectedCategories.map((slug) => labels[slug] ?? slug).join(" or ")}`
+      : null,
+    selectedLocation ? `around ${selectedLocation}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <section className="flex flex-col gap-4">
+      <p className="text-body-sm text-fg-muted">
+        {hasFilters
+          ? `${activities.length} of ${all.length} ${all.length === 1 ? "activity" : "activities"} ${description}`
+          : `All ${activities.length} ${activities.length === 1 ? "activity" : "activities"}`}
+      </p>
+
+      <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {activities.map((activity, index) => (
+          <ActivityCard
+            key={activity.id}
+            activity={activity}
+            priority={index < 3}
+            categoryLabel={labels[activity.category]}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ResultsFallback() {
+  return (
+    <div className="flex flex-col gap-4">
+      <Skeleton className="h-5 w-40" />
+      <ActivityGridSkeleton />
     </div>
   );
 }

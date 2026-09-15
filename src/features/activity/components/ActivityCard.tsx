@@ -1,4 +1,4 @@
-import { Clock, MapPin } from "lucide-react";
+import { Clock, ImageOff, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Price } from "@/shared/ui";
@@ -36,7 +36,16 @@ export function ActivityCard({
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
-          ) : null}
+          ) : (
+            /* An activity without photography is a CMS gap, not a broken card - say so
+               quietly rather than leaving a grey hole in the grid. */
+            <span
+              aria-hidden
+              className="text-fg-subtle absolute inset-0 flex items-center justify-center"
+            >
+              <ImageOff size={28} strokeWidth={1.4} />
+            </span>
+          )}
           {label ? (
             <span className="bg-surface/90 text-label text-fg absolute top-3 left-3 rounded-sm px-2 py-1 uppercase backdrop-blur-sm">
               {label}

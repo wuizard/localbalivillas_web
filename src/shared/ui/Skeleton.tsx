@@ -51,3 +51,45 @@ export function PropertyGridSkeleton({ count = 8 }: { count?: number }) {
     </ul>
   );
 }
+
+/** Mirrors ActivityCard: 4:3 image, title, two-line summary, meta row, price row. */
+export function ActivityCardSkeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col overflow-hidden rounded-md border border-border bg-surface",
+        className,
+      )}
+    >
+      <Skeleton className="aspect-[4/3] rounded-none" />
+
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <Skeleton className="h-[1.625rem] w-4/5" />
+
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-3/5" />
+
+        <div className="mt-auto flex items-center gap-4 pt-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-5 w-16" />
+        </div>
+
+        <div className="mt-1 border-t border-border pt-3">
+          <Skeleton className="h-6 w-32" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ActivityGridSkeleton({ count = 8 }: { count?: number }) {
+  return (
+    <ul aria-hidden className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: count }, (_, index) => (
+        <li key={index}>
+          <ActivityCardSkeleton className="h-full" />
+        </li>
+      ))}
+    </ul>
+  );
+}
