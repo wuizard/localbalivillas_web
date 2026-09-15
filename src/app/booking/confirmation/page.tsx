@@ -29,7 +29,7 @@ export default async function ConfirmationPage({ searchParams }: PageProps) {
 
       <p className="mt-3 max-w-md text-body text-fg-muted">
         Your booking request is in. Your confirmation is emailed by our team and that email is
-        the record of your reservation — this page is not.
+        the record of your reservation. This page is not.
       </p>
 
       {simulated ? (

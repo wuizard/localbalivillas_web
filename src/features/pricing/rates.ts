@@ -1,4 +1,5 @@
-import { occupiedNights, weekdayOf } from "./nights";
+import { occupiedNights } from "./nights";
+import { matchDateRule } from "./rules";
 import type { IsoDate, NightRate, PricedRoom } from "./types";
 
 /**
@@ -16,15 +17,7 @@ import type { IsoDate, NightRate, PricedRoom } from "./types";
  *  2. Legacy lets a later weekday rule overwrite an earlier one. First match wins here.
  */
 export function resolveNightlyRate(room: PricedRoom, date: IsoDate): number {
-  const weekday = weekdayOf(date);
-  let weekdayMatch: number | null = null;
-
-  for (const rule of room.priceRules) {
-    if (rule.date?.includes(date)) return rule.price;
-    if (weekdayMatch === null && rule.day?.includes(weekday)) weekdayMatch = rule.price;
-  }
-
-  return weekdayMatch ?? room.basePrice;
+  return matchDateRule(room.priceRules, date)?.price ?? room.basePrice;
 }
 
 /** One rate per night slept, in stay order. The checkout date is never charged. */

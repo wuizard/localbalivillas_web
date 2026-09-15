@@ -19,7 +19,7 @@ export const guestSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, "Enter your email — your confirmation goes here")
+    .min(1, "Enter your email. Your confirmation goes here")
     .email("That doesn't look like an email address"),
   phoneNumber: z
     .string()

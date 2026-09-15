@@ -1,6 +1,6 @@
 "use client";
 
-import { Compass, Heart, Search, User } from "lucide-react";
+import { BedDouble, CalendarHeart, Compass, Menu, Ticket } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -9,9 +9,10 @@ import { showsBottomNav } from "./routes";
 
 const ITEMS = [
   { href: "/", label: "Explore", icon: Compass },
-  { href: "/properties", label: "Search", icon: Search },
-  { href: "/wishlist", label: "Wishlist", icon: Heart },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/properties", label: "Stays", icon: BedDouble },
+  { href: "/activities", label: "Activities", icon: Ticket },
+  { href: "/events", label: "Events", icon: CalendarHeart },
+  { href: "/profile", label: "Menu", icon: Menu },
 ] as const;
 
 /** Past this the gesture is a drag, not a tap, and the tap's click gets suppressed. */
@@ -188,13 +189,10 @@ export function BottomNav() {
                     isHighlighted && "text-brand-700 dark:text-brand-300",
                   )}
                 >
-                  <Icon
-                    size={21}
-                    strokeWidth={isHighlighted ? 2.2 : 1.8}
-                    aria-hidden
-                    className={cn(isHighlighted && href === "/wishlist" && "fill-current")}
-                  />
-                  <span className="text-[11px] leading-none font-semibold">{label}</span>
+                  <Icon size={21} strokeWidth={isHighlighted ? 2.2 : 1.8} aria-hidden />
+                  <span className="text-[11px] leading-none font-semibold whitespace-nowrap">
+                    {label}
+                  </span>
                 </Link>
               </li>
             );

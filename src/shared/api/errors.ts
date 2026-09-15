@@ -24,3 +24,12 @@ export class ApiError extends Error {
     }
   }
 }
+
+/**
+ * A section whose endpoint is not deployed in this environment answers 404. That is an
+ * empty catalogue, not an outage — it must not fail a prerender. Narrow on purpose: a
+ * network failure or a shape change still throws, so we never ship a silently blank page.
+ */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.kind === "http" && error.status === 404;
+}

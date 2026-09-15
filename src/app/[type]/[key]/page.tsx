@@ -68,7 +68,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     `Book ${property.name}, a ${label.toLowerCase()} in ${property.location}, Bali, direct with ${site.name}.`;
 
   return {
-    title: `${property.name} — ${label} in ${property.location}, Bali`,
+    title: `${property.name}: ${label} in ${property.location}, Bali`,
     description,
     alternates: { canonical: property.href },
     // Next merges `openGraph` shallowly, so the page object replaces the layout's outright —

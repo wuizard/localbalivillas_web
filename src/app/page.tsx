@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import {
+  ACTIVITY_COVER,
   CategoryShelf,
   HomeHero,
   LocationsSection,
@@ -30,7 +31,8 @@ export const metadata: Metadata = {
 
 /** Editorial picks. If a key disappears from the API the tile falls back to a featured villa. */
 const HERO_KEY = "the-cove-bali";
-const CATEGORY_KEYS = ["villa-morada", "amala-ubud", "villa-naga-sutra"] as const;
+/** Villas and events only - the activities tile is illustrated by `ACTIVITY_COVER`. */
+const CATEGORY_KEYS = { villas: "villa-morada", events: "villa-naga-sutra" } as const;
 
 /**
  * Night frames, chosen by hand from the same library — the page shifts to evening on the
@@ -49,7 +51,7 @@ export default async function HomePage() {
     getFeaturedProperties(4),
     getPropertiesByKey([
       HERO_KEY,
-      ...CATEGORY_KEYS,
+      ...Object.values(CATEGORY_KEYS),
       ...NIGHT_FRAMES.map((frame) => frame.key),
     ]),
     getDestinations(),
@@ -73,9 +75,9 @@ export default async function HomePage() {
   const heroImage = imageFor(HERO_KEY, 0);
 
   const tiles: CategoryTile[] = [
-    { key: "villas", image: imageFor(CATEGORY_KEYS[0], 1), nightImage: nightFor("villas") },
-    { key: "activities", image: imageFor(CATEGORY_KEYS[1], 2) },
-    { key: "events", image: imageFor(CATEGORY_KEYS[2], 3), nightImage: nightFor("events") },
+    { key: "villas", image: imageFor(CATEGORY_KEYS.villas, 1), nightImage: nightFor("villas") },
+    { key: "activities", image: ACTIVITY_COVER },
+    { key: "events", image: imageFor(CATEGORY_KEYS.events, 3), nightImage: nightFor("events") },
   ];
 
   return (

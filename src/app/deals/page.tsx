@@ -23,7 +23,7 @@ export default async function DealsPage() {
         <h1 className="mt-2 font-display text-display-lg text-fg">Promo codes</h1>
         <p className="mt-3 text-body text-fg-muted">
           Booking direct is already the best rate we offer. When we run a promotion, the code
-          appears here — enter it at checkout and the discount is applied to your total.
+          appears here. Enter it at checkout and the discount is applied to your total.
         </p>
       </header>
 
@@ -36,7 +36,7 @@ export default async function DealsPage() {
           <p className="text-body text-fg-muted">
             We would rather show you nothing than a code that fails at checkout. Our best-price
             guarantee still applies to every direct booking, and if you are travelling with a
-            group or for longer than a fortnight, message us — we quote those by hand.
+            group or for longer than a fortnight, message us. We quote those by hand.
           </p>
           <div className="mt-1 flex flex-wrap gap-3">
             <ButtonLink href="/properties" size="md">

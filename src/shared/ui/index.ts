@@ -6,5 +6,11 @@ export { Logo } from "./Logo";
 export { Price } from "./Price";
 export { SectionHeading } from "./SectionHeading";
 export { ShareButton } from "./ShareButton";
-export { PropertyCardSkeleton, PropertyGridSkeleton, Skeleton } from "./Skeleton";
+export {
+  ActivityCardSkeleton,
+  ActivityGridSkeleton,
+  PropertyCardSkeleton,
+  PropertyGridSkeleton,
+  Skeleton,
+} from "./Skeleton";
 export { ThemeToggle } from "./ThemeToggle";

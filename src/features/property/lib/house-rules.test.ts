@@ -55,6 +55,49 @@ describe("toHouseRuleGroups", () => {
     ]);
   });
 
+  it("gives every rule a unique id even when the same line is published twice", () => {
+    const duplicated = `<ul>
+<li>Extra bed on request (IDR 650,000 per child, per night)</li>
+<li>Extra bed on request (IDR 650,000 per child, per night)</li>
+</ul>`;
+
+    const ids = toHouseRuleGroups(duplicated).flatMap((group) =>
+      group.rules.map((rule) => rule.id),
+    );
+
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  /**
+   * Villa Bangkuang publishes headed paragraphs plus one stray `<ul>`. The old reader saw the
+   * list and dropped every paragraph with it, so the page showed a lone "House rules" panel
+   * while check-in, check-out and the age limit sat unread in the payload.
+   */
+  it("keeps headed paragraphs that sit alongside a list, and labels them by their heading", () => {
+    const headedParagraphs = `<p><strong><u>Check in</u></strong></p>
+<p>Guests are required to show an identity card with a photo at check-in.</p>
+<p><br></p>
+<p><strong><u>Check out</u></strong></p>
+<p>From 08.00 AM to 12.00 PM</p>
+<p><strong><u>Age Limited</u></strong></p>
+<p>There is no age requirement for check-in</p>
+<ul><li>Child policy: maximum of 2 children for each villa</li></ul>`;
+
+    const groups = toHouseRuleGroups(headedParagraphs);
+
+    expect(groups.map((group) => group.id)).toEqual(["check-in", "guests", "house-rules"]);
+    expect(groups[0]?.rules).toEqual([
+      {
+        id: "check-in-0",
+        label: "Check in",
+        value: "Guests are required to show an identity card with a photo at check-in.",
+      },
+      { id: "check-in-1", label: "Check out", value: "From 08.00 AM to 12.00 PM" },
+    ]);
+    expect(groups[1]?.rules[0]?.label).toBe("Age Limited");
+  });
+
   it("returns nothing when the property has no rules", () => {
     expect(toHouseRuleGroups(null)).toEqual([]);
     expect(toHouseRuleGroups("")).toEqual([]);

@@ -1,0 +1,16 @@
+# Build settings live here rather than in the Netlify UI so they are reviewable and
+# move with the branch. This file takes precedence over the UI's build settings.
+#
+# `publish` is Next's own output directory. It is not "build" — that is a Create React
+# App convention, and pointing Netlify at it fails after a fully successful build with
+# "Your publish directory was not found", which reads like a build error and is not one.
+# If `distDir` is ever set in next.config.ts, this has to move with it.
+[build]
+  command = "bun run build"
+  publish = ".next"
+
+# @netlify/plugin-nextjs is installed from the Netlify UI. Declaring it here as well
+# registers it twice, so it is deliberately absent.
+
+# Environment variables stay in the UI: NEXT_PUBLIC_API_BASE_URL decides whether a
+# booking is real, and that is not a value to carry in the repository.

@@ -3,25 +3,25 @@
 import { ChevronDown, Heart, Menu, Phone, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CurrencySwitch } from "@/shared/currency";
-import { useDismissable } from "@/shared/hooks/useDismissable";
 import { useLockBodyScroll } from "@/shared/hooks/useLockBodyScroll";
 import { useWishlist } from "@/shared/hooks/useWishlist";
 import { cn } from "@/shared/lib/cn";
-import { primaryNav, propertyTypes, site } from "@/shared/config/site";
+import { primaryNav, site, type NavItem, type NavMenuItem } from "@/shared/config/site";
 import { BackButton, ButtonLink, Logo } from "@/shared/ui";
 import { ThemeToggle } from "@/shared/ui/ThemeToggle";
 import { backFallbackFor, isPropertyDetail } from "./routes";
 
-export function TopNav() {
+/**
+ * `activityCategories` is the subset that actually has published activities behind it,
+ * resolved server-side in `AppShell`. An empty array means the Activities item renders
+ * as a plain link — which is also what happens if that fetch fails.
+ */
+export function TopNav({ activityCategories = [] }: { activityCategories?: NavMenuItem[] }) {
   const pathname = usePathname();
-  const {
-    isOpen: isVillasOpen,
-    setOpen: setVillasOpen,
-    containerRef: villasRef,
-    triggerRef: villasTriggerRef,
-  } = useDismissable<HTMLDivElement>();
+  // One open menu at a time, keyed by href. A hook per item would let two sit open.
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const wishlist = useWishlist();
   const isDetail = isPropertyDetail(pathname);
 
@@ -32,6 +32,11 @@ export function TopNav() {
   const setMenuOpen = (open: boolean) => setOpenedOn(open ? pathname : null);
 
   useLockBodyScroll(isMenuOpen);
+
+  // Activities only opens a dropdown once something sits behind it.
+  const navItems: NavItem[] = primaryNav.map((item) =>
+    item.href === "/activities" ? { ...item, menu: activityCategories } : item,
+  );
 
   return (
     <header
@@ -89,53 +94,22 @@ export function TopNav() {
         {/* Not "Primary" — that label belongs to the bottom navigation (DESIGN.md §4.1),
             and two landmarks sharing a name is a screen-reader ambiguity. */}
         <nav aria-label="Main" className="mx-auto hidden items-center gap-7 lg:flex">
-          <div ref={villasRef} className="relative">
-            <button
-              type="button"
-              ref={villasTriggerRef}
-              aria-expanded={isVillasOpen}
-              aria-haspopup="menu"
-              onClick={() => setVillasOpen(!isVillasOpen)}
-              className={cn(
-                "text-label flex items-center gap-1.5 uppercase transition-colors duration-[120ms]",
-                pathname.startsWith("/properties") || isVillasOpen
-                  ? "text-brand-600 dark:text-brand-300"
-                  : "text-fg hover:text-brand-600",
-              )}
-            >
-              Villas
-              <ChevronDown
-                size={14}
-                aria-hidden
-                className={cn("transition-transform duration-200", isVillasOpen && "rotate-180")}
+          {navItems.map((item) =>
+            item.menu && item.menu.length > 0 ? (
+              <NavMenu
+                key={item.href}
+                item={item}
+                menu={item.menu}
+                isOpen={openMenu === item.href}
+                setOpen={(open) => setOpenMenu(open ? item.href : null)}
+                isActive={pathname.startsWith(item.href)}
               />
-            </button>
-
-            {isVillasOpen ? (
-              <ul
-                role="menu"
-                className="border-border bg-surface absolute top-[calc(100%+14px)] left-1/2 z-30 w-56 -translate-x-1/2 rounded-md border p-1.5 shadow-lg"
-              >
-                {propertyTypes.map((type) => (
-                  <li key={type.value} role="none">
-                    <Link
-                      role="menuitem"
-                      href={type.href}
-                      className="text-body text-fg hover:bg-surface-muted hover:text-brand-600 block rounded-sm px-3 py-2.5 transition-colors"
-                    >
-                      {type.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-
-          {primaryNav.slice(1).map((item) => (
-            <NavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)}>
-              {item.label}
-            </NavLink>
-          ))}
+            ) : (
+              <NavLink key={item.href} href={item.href} isActive={pathname.startsWith(item.href)}>
+                {item.label}
+              </NavLink>
+            ),
+          )}
         </nav>
 
         {/* ml-auto pins this right now the logo no longer occupies flow; on lg the centred
@@ -168,8 +142,106 @@ export function TopNav() {
         </div>
       </div>
 
-      {isMenuOpen ? <MobileMenu onClose={() => setMenuOpen(false)} /> : null}
+      {isMenuOpen ? <MobileMenu items={navItems} onClose={() => setMenuOpen(false)} /> : null}
     </header>
+  );
+}
+
+/**
+ * One dropdown. Escape closes it and returns focus to the trigger; a pointer down
+ * anywhere else closes it too. Opening one closes the other, because the parent owns
+ * a single `openMenu` rather than a hook per item.
+ */
+function NavMenu({
+  item,
+  menu,
+  isOpen,
+  setOpen,
+  isActive,
+}: {
+  item: NavItem;
+  menu: readonly NavMenuItem[];
+  isOpen: boolean;
+  setOpen: (open: boolean) => void;
+  isActive: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, setOpen]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        ref={triggerRef}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        onClick={() => setOpen(!isOpen)}
+        className={cn(
+          "text-label flex items-center gap-1.5 uppercase transition-colors duration-[120ms]",
+          isActive || isOpen ? "text-brand-600 dark:text-brand-300" : "text-fg hover:text-brand-600",
+        )}
+      >
+        {item.label}
+        <ChevronDown
+          size={14}
+          aria-hidden
+          className={cn("transition-transform duration-200", isOpen && "rotate-180")}
+        />
+      </button>
+
+      {isOpen ? (
+        <ul
+          role="menu"
+          className="border-border bg-surface absolute top-[calc(100%+14px)] left-1/2 z-30 w-56 -translate-x-1/2 rounded-md border p-1.5 shadow-lg"
+        >
+          <li role="none">
+            <Link
+              role="menuitem"
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="text-body text-fg hover:bg-surface-muted hover:text-brand-600 border-border block rounded-sm border-b px-3 py-2.5 transition-colors"
+            >
+              All {item.label.toLowerCase()}
+            </Link>
+          </li>
+          {menu.map((entry) => (
+            <li key={entry.value} role="none">
+              <Link
+                role="menuitem"
+                href={entry.href}
+                onClick={() => setOpen(false)}
+                className="text-body text-fg hover:bg-surface-muted hover:text-brand-600 block rounded-sm px-3 py-2.5 transition-colors"
+              >
+                {entry.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -206,7 +278,7 @@ function LanguageSwitch() {
   );
 }
 
-function MobileMenu({ onClose }: { onClose: () => void }) {
+function MobileMenu({ items, onClose }: { items: NavItem[]; onClose: () => void }) {
   return (
     <div role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-50 lg:hidden">
       <button
@@ -231,24 +303,30 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
 
         <nav aria-label="Menu" className="flex-1 overflow-y-auto px-4 py-2">
           <ul className="flex flex-col">
-            {propertyTypes.map((type) => (
-              <li key={type.value}>
-                <Link
-                  href={type.href}
-                  className="border-border text-body text-fg block border-b py-4"
-                >
-                  {type.label}
-                </Link>
-              </li>
-            ))}
-            {primaryNav.slice(1).map((item) => (
+            {items.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onClose}
                   className="border-border text-body text-fg block border-b py-4"
                 >
                   {item.label}
                 </Link>
+                {item.menu && item.menu.length > 0 ? (
+                  <ul className="flex flex-col">
+                    {item.menu.map((entry) => (
+                      <li key={entry.value}>
+                        <Link
+                          href={entry.href}
+                          onClick={onClose}
+                          className="border-border text-body-sm text-fg-muted block border-b py-3 pl-4"
+                        >
+                          {entry.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>

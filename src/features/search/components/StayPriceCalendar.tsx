@@ -28,10 +28,15 @@ function DayContents({ date, rooms }: { date: DateValue; rooms: PricedRoom[] }) 
   return (
     <span className="flex flex-col items-center leading-none">
       <span className={cn("text-body-sm", soldOut && "line-through")}>{date.day}</span>
+      {/* A selected cell paints its own background — solid accent at the ends of the
+          range, a soft tint in between — and the readable text colour differs for each
+          and flips again in dark mode. Inherit the cell's own colour rather than
+          keeping a muted grey that disappears on the accent. */}
       <span
         className={cn(
           "mt-0.5 text-[9px] tracking-tight",
           soldOut ? "text-fg-subtle" : "text-fg-muted",
+          "group-data-[selected=true]:text-inherit",
         )}
       >
         {soldOut ? "Sold" : price === null ? "" : formatCompact(price)}
@@ -93,8 +98,9 @@ export function StayPriceCalendar({
         </RangeCalendar.GridHeader>
 
         <RangeCalendar.GridBody>
+          {/* `group` so the price inside can react to the cell's own data-selected. */}
           {(date) => (
-            <RangeCalendar.Cell date={date}>
+            <RangeCalendar.Cell date={date} className="group">
               <DayContents date={date} rooms={rooms} />
             </RangeCalendar.Cell>
           )}

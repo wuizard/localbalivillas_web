@@ -9,5 +9,6 @@ export type { AboutBlock, AboutPage } from "./data/about-pages";
 export { ComingSoon } from "./components/ComingSoon";
 export type { ComingSoonContent } from "./components/ComingSoon";
 export { ACTIVITIES, EVENTS } from "./data/concierge";
+export { ACTIVITY_COVER } from "./lib/activity-cover";
 export { getDeals } from "./api/deals";
 export type { Deal } from "./api/deals";

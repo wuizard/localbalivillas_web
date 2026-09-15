@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: page.title,
-    description: firstParagraph?.slice(0, 155) ?? `${page.title} — ${site.name}.`,
+    description: firstParagraph?.slice(0, 155) ?? `${page.title}. ${site.name}.`,
     alternates: { canonical: `/about-us/${page.slug}` },
   };
 }

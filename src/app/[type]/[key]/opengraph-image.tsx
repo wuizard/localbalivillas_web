@@ -4,7 +4,7 @@ import { PROPERTY_TYPE_LABEL, PROPERTY_TYPES, getPropertyDetail } from "@/featur
 import type { PropertyType } from "@/features/property";
 import { site } from "@/shared/config/site";
 
-export const alt = `${site.name} — villa in Bali`;
+export const alt = `${site.name}: villa in Bali`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/jpeg";
 
