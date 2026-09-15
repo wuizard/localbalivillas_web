@@ -45,10 +45,10 @@ export function CategoryShelf({ tiles }: { tiles: CategoryTile[] }) {
           const Icon = category.icon;
 
           return (
-            <li key={key} className="w-[64vw] shrink-0 snap-start sm:w-[46vw] md:w-auto">
+            <li key={key} className="w-[70vw] shrink-0 snap-start sm:w-[48vw] md:w-auto">
               <Link
                 href={category.href}
-                className="group relative flex aspect-[4/3] flex-col items-center justify-end overflow-hidden rounded-md text-center md:aspect-square"
+                className="group relative flex aspect-square flex-col items-center justify-end overflow-hidden rounded-md text-center"
               >
                 {image ? (
                   <TimeAwareImage
@@ -67,12 +67,12 @@ export function CategoryShelf({ tiles }: { tiles: CategoryTile[] }) {
                   className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10"
                 />
 
-                <span className="relative flex w-full flex-col items-center gap-3 px-6 pb-5">
-                  <span className="flex size-14 items-center justify-center rounded-full border border-white/40 bg-white/15 text-white backdrop-blur-sm transition-colors duration-200 group-hover:bg-white/25">
-                    <Icon size={24} strokeWidth={1.6} aria-hidden />
+                <span className="relative flex w-full flex-col items-center gap-2.5 px-5 pb-5 md:gap-3 md:px-6">
+                  <span className="flex size-12 items-center justify-center rounded-full border border-white/40 bg-white/15 text-white backdrop-blur-sm transition-colors duration-200 group-hover:bg-white/25 md:size-14">
+                    <Icon size={22} strokeWidth={1.6} aria-hidden />
                   </span>
 
-                  <span className="font-display text-2xl tracking-[0.06em] text-white uppercase">
+                  <span className="font-display text-xl tracking-[0.06em] text-white uppercase md:text-2xl">
                     {category.title}
                   </span>
 
@@ -81,7 +81,7 @@ export function CategoryShelf({ tiles }: { tiles: CategoryTile[] }) {
                     {category.description}
                   </span>
 
-                  <span className="mt-3 flex w-full items-center justify-center gap-2 border-t border-white/25 pt-4 text-label text-white uppercase">
+                  <span className="mt-2 flex w-full items-center justify-center gap-2 border-t border-white/25 pt-3.5 text-label text-white uppercase md:mt-3 md:pt-4">
                     {category.cta}
                     <ArrowRight
                       size={14}
