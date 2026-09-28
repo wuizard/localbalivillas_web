@@ -45,6 +45,18 @@ const MAX_ROOMS = 10;
 const THUMB_STEP = 72;
 const THUMB_SCROLL_MS = 420;
 
+/**
+ * The pool spec only claims what the CMS actually says. An empty pool size used to
+ * fall back to "Resort access" on every villa, whether or not it had one.
+ */
+function poolLabel(room: RoomOffer) {
+  if (room.poolSize) return `Pool ${room.poolSize}`;
+  if (room.amenities.some((amenity) => amenity.toLowerCase() === "resort access")) {
+    return "Resort access";
+  }
+  return "-";
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -93,7 +105,7 @@ export function RoomOfferCard({ room, propertyKey, propertyType }: RoomOfferCard
               }
             />
             <Spec icon={Maximize2} value={room.roomSize ?? "-"} />
-            <Spec icon={Waves} value={room.poolSize ? `Pool ${room.poolSize}` : "Resort access"} />
+            <Spec icon={Waves} value={poolLabel(room)} />
           </ul>
 
           {room.amenities.length > 0 ? (
